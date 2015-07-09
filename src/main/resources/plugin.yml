@@ -1,0 +1,9 @@
+name: Gameboy
+version: 1.0 Release
+main: com.sanjay900.jgbe.emu.swinggui
+depend: [ProtocolLib, EyrePlugin]
+commands:
+    gameboy:
+        aliases: [gb, game, gba]
+        description: Gameboy related commands.
+        usage: /gameboy
