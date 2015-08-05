@@ -53,8 +53,8 @@ public class JavaBoyEventHandler implements Listener{
 	}
 	@EventHandler
 	public void onJoin(final PlayerJoinEvent evt) {
-		Bukkit.getOnlinePlayers().forEach(player -> Bukkit.getOnlinePlayers().forEach(player::hidePlayer));
 		if (jb.gp != null) {
+			Bukkit.getOnlinePlayers().forEach(player -> Bukkit.getOnlinePlayers().forEach(player::hidePlayer));
 			evt.getPlayer().setAllowFlight(true);
 			evt.getPlayer().setFlying(true);
 			evt.getPlayer().getInventory().clear();
@@ -65,16 +65,13 @@ public class JavaBoyEventHandler implements Listener{
 			l.setDirection(new Vector (0,0,-1));
 			evt.getPlayer().teleport(l);
 		}else if (!cart.equals("")) {
-			Bukkit.getScheduler().runTaskLater(jb, new Runnable(){
-
-				@Override
-				public void run() {
-					evt.getPlayer().setAllowFlight(true);
-					evt.getPlayer().setFlying(true);
-					jb.gp = new GameboyPlayer(evt.getPlayer(),cart);
-					cart = "";
-
-				}}, 20l);
+			Bukkit.getScheduler().runTaskLater(jb, ()->{
+				if (jb.gp != null) {
+					CPU.severLink();
+				}
+				jb.gp = new GameboyPlayer(evt.getPlayer(),cart);
+				cart = "";
+			}, 40l);
 		}
 
 	}
@@ -87,40 +84,40 @@ public class JavaBoyEventHandler implements Listener{
 		evt.setCancelled(true);
 	}
 	@EventHandler
-    public void mapAttack(HangingBreakByEntityEvent evt) {
+	public void mapAttack(HangingBreakByEntityEvent evt) {
 		evt.setCancelled(true);
-    	
-    }
+
+	}
 	@EventHandler
-    public void mapclick(final PlayerInteractEntityEvent evt) {
+	public void mapclick(final PlayerInteractEntityEvent evt) {
 		evt.setCancelled(true);
 		onClick(evt.getPlayer(),Action.RIGHT_CLICK_AIR);
-    	
-    }
+
+	}
 	@EventHandler 
 	public void blockplace(final BlockPlaceEvent evt) {
 		evt.setBuild(false);
 	}
-    @EventHandler
-    public void mapclick(final EntityDamageByEntityEvent evt) {
+	@EventHandler
+	public void mapclick(final EntityDamageByEntityEvent evt) {
 		evt.setCancelled(true);
 		if (evt.getDamager() instanceof Player && evt.getEntity() instanceof ItemFrame)
-		onClick((Player) evt.getDamager(),Action.LEFT_CLICK_AIR);
-    }
-    @EventHandler
-    public void mapclick(final PlayerInteractAtEntityEvent evt) {
+			onClick((Player) evt.getDamager(),Action.LEFT_CLICK_AIR);
+	}
+	@EventHandler
+	public void mapclick(final PlayerInteractAtEntityEvent evt) {
 		evt.setCancelled(true);
 		onClick(evt.getPlayer(),Action.RIGHT_CLICK_AIR);
-    }
-    @EventHandler
+	}
+	@EventHandler
 	public void onClick(final PlayerInteractEvent evt) {
 		evt.setCancelled(true);
 		onClick(evt.getPlayer(),evt.getAction());
-		
+
 	}
-    public void onClick(final Player pl, Action action) {
-    	if (jb.gp == null) return;
-    	ItemStack it = pl.getItemInHand();
+	public void onClick(final Player pl, Action action) {
+		if (jb.gp == null) return;
+		ItemStack it = pl.getItemInHand();
 		final Button buttonPressed;
 		if (it.hasItemMeta()
 				&& it.getItemMeta().hasDisplayName()
@@ -139,7 +136,6 @@ public class JavaBoyEventHandler implements Listener{
 			out.writeUTF("Connect");
 			out.writeUTF("lobby");
 			pl.sendPluginMessage(jb, "BungeeCord", out.toByteArray());
-
 			return;
 		}
 
@@ -190,7 +186,7 @@ public class JavaBoyEventHandler implements Listener{
 				jb.gp.keyToggled(buttonPressed,false);
 			}}, 10l);
 
-    }
+	}
 	@EventHandler
 	public void pushedKey(final PlayerPushedKeyEvent evt) {
 		if (jb.gp != null) {
@@ -202,7 +198,7 @@ public class JavaBoyEventHandler implements Listener{
 						@Override
 						public void run() {
 							if (Cooldown.tryCooldown(evt.getPlayer(), "start", 200))
-							jb.gp.keyToggled(Button.OPENINVENTORY, false);
+								jb.gp.keyToggled(Button.OPENINVENTORY, false);
 						}}, 4l);
 				}
 				return;
@@ -215,7 +211,7 @@ public class JavaBoyEventHandler implements Listener{
 					@Override
 					public void run() {
 						if (Cooldown.tryCooldown(evt.getPlayer(), "select", 200))
-						jb.gp.keyToggled(Button.DROPITEM, false);
+							jb.gp.keyToggled(Button.DROPITEM, false);
 					}}, 4l);
 				return;
 			}
@@ -224,7 +220,7 @@ public class JavaBoyEventHandler implements Listener{
 			}				
 		}
 	}
-	
+
 
 	@EventHandler
 	public void leaveGameEvt(PlayerQuitEvent evt) {
@@ -238,30 +234,34 @@ public class JavaBoyEventHandler implements Listener{
 		System.out.println(CPU.player);
 		if (CPU.player == null || !CPU.player.equals(p.getUniqueId()) ) return;
 		for (Player pl:Bukkit.getOnlinePlayers()) {
-			if (!CPU.player.equals(pl.getUniqueId()))
-			pl.sendMessage("You player that you were spectating has left their gameboy.");
+			if (!CPU.player.equals(pl.getUniqueId())) {
+				pl.sendMessage("You player that you were spectating has left their gameboy.");
+			}
 		}
 		if (!CPU.canRun()) {
 			return;
 		}
-		swinggui.pauseEmulation(false);
-		DataOutputStream dostream;
-		try {
-			dostream = FHandler.getDataOutputStream(jb.getDataFolder().getAbsolutePath()+"/../../../gameboy/saves/"+CPU.player.toString()+"_"+swinggui.curcartname+".st");
-
-			CPU.saveState(dostream);
-			dostream.close();
-			} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		//Kill the connection and pause emulation. Your not going to restore a connected snapshot
 		CPU.severLink();
+		swinggui.pauseEmulation(false);
 		Bukkit.getScheduler().runTaskLater(jb, new Runnable(){
-
 			@Override
 			public void run() {
-				Bukkit.getServer().shutdown();
-			}}, 20l);
+				DataOutputStream dostream;
+				try {
+					dostream = FHandler.getDataOutputStream(jb.getDataFolder().getAbsolutePath()+"/../../../gameboy/saves/"+CPU.player.toString()+"_"+swinggui.curcartname+".st");
+					CPU.saveState(dostream);
+					dostream.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				Bukkit.getScheduler().runTaskLater(jb, new Runnable(){
+
+					@Override
+					public void run() {
+						Bukkit.getServer().shutdown();
+					}}, 100l);
+			}},20l);
 	}
 	public void updateLinkMenu() {
 		for (Entry<Integer, RemoteServerLink> e: this.jb.socketio.servers.entrySet()) {
@@ -284,12 +284,8 @@ public class JavaBoyEventHandler implements Listener{
 		}
 	}
 	private void createLinkMenu(final Player player) {
-
 		if (CPU.isConnected()) return;
 		updateLinkMenu();
-
 		menu.show(player);
-
-
 	}
 }

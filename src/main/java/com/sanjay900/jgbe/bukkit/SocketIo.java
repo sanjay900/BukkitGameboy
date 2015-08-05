@@ -100,7 +100,7 @@ public class SocketIo {
 					} else {
 						Bukkit.getPlayer(acceptPlayer).sendMessage("Your request was denied by the other player.");
 					}
-				} catch (JSONException | IOException ex) {
+				} catch (JSONException ex) {
 					ex.printStackTrace();
 				}
 			}

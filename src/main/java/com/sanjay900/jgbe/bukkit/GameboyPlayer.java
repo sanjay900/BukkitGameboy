@@ -2,6 +2,7 @@ package com.sanjay900.jgbe.bukkit;
 
 import java.io.DataInputStream;
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
@@ -15,6 +16,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.util.Vector;
 
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.wrappers.BlockPosition;
 import com.sanjay900.jgbe.converters.Converter;
 import com.sanjay900.jgbe.converters.GoldConverter;
 import com.sanjay900.jgbe.converters.PokemonConverter;
@@ -70,6 +75,7 @@ public class GameboyPlayer {
 				p.getInventory().setItem(2, stuck);
 				p.getInventory().setItem(8, exit);
 				p.getInventory().setHeldItemSlot(0);
+				p.sendMessage(ChatColor.YELLOW+"Controlls: Jump for A, Sneak for B, Hold the clock and Mine for start, Interact for select, and move for directionals.");
 				new ControllerFactory().withLocation(l).withPlayer(p).build();	
 				Bukkit.getScheduler().runTaskLaterAsynchronously(jb, new Runnable(){
 
