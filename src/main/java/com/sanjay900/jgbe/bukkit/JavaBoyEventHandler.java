@@ -256,7 +256,6 @@ public class JavaBoyEventHandler implements Listener{
 					e.printStackTrace();
 				}
 				Bukkit.getScheduler().runTaskLater(jb, new Runnable(){
-
 					@Override
 					public void run() {
 						Bukkit.getServer().shutdown();
