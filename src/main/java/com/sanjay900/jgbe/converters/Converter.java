@@ -1,15 +1,23 @@
 package com.sanjay900.jgbe.converters;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
+
+import org.bukkit.Bukkit;
 
 import com.google.common.base.CharMatcher;
-import com.sanjay900.jgbe.emu.swinggui;
+import com.sanjay900.jgbe.bukkit.GameboyPlugin;
+import com.sanjay900.jgbe.emu.CPU;
 
 public abstract class Converter {
-	swinggui jb = swinggui.getInstance();
+	GameboyPlugin plugin = GameboyPlugin.getInstance();
 	public Converter() {
 	}
-	public abstract void writtenMemory(int address);
+	public void writtenMemory(int address) {
+		if (plugin.isEnabled())
+		Bukkit.getScheduler().runTaskLater(plugin, () ->writeMemory(address),5l);
+	}
+	abstract void writeMemory(int address);
 	public static String BCDtoString(int bcd) {
 		StringBuffer sb = new StringBuffer();
 		
@@ -48,6 +56,13 @@ public abstract class Converter {
 	public short getShort(int b, int a) {
 		ByteBuffer bb = ByteBuffer.wrap(new byte[]{(byte) a,(byte) b});
 		return bb.getShort();
+	}
+	public int[] getWram(int start, int end) {
+		int[] mm = plugin.cpu.wMemMap[start>>12];
+		if (mm!=null) {
+			return Arrays.copyOfRange(mm, start&0x0FFF, 1+end&0x0FFF);
+		}
+		return Arrays.copyOfRange(plugin.cpu.WRAM[plugin.cpu.CurrentWRAMBank], start-0xd000, 1+end-0xd000);
 	}
 	
 }

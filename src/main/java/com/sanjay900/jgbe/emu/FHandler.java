@@ -15,73 +15,73 @@ import java.util.zip.ZipInputStream;
 
 public final class FHandler {
 
- public static InputStream getInputStream(Path fname) throws IOException {
-  String error = "";
-  try {
-   return new FileInputStream(fname.toFile());
-  } catch (Exception e) {
-   error = error + e.toString() + '\n';
-  };
-  throw new IOException(error);
- }
+	public static InputStream getInputStream(Path fname) throws IOException {
+		String error = "";
+		try {
+			return new FileInputStream(fname.toFile());
+		} catch (Exception e) {
+			error = error + e.toString() + '\n';
+		};
+		throw new IOException(error);
+	}
 
 
- public static DataInputStream getDataInputStream(String fname) throws IOException {
+	public static DataInputStream getDataInputStream(String fname) throws IOException {
 
-  InputStream instr = getInputStream(Paths.get(fname));
+		InputStream instr = getInputStream(Paths.get(fname));
 
-  int dotPos=0;
-  int dp = fname.indexOf(".");
-  while(dp>=0) {
-   dotPos=dp;
-   dp=fname.indexOf(".",dp+1);
-  }
-  String fext = fname.substring(dotPos);
-  if ( !fext.equals(".zip") ) {
-   DataInputStream distream = new DataInputStream(instr);
-   return distream;
-  }
-  else {
+		int dotPos=0;
+		int dp = fname.indexOf(".");
+		while(dp>=0) {
+			dotPos=dp;
+			dp=fname.indexOf(".",dp+1);
+		}
+		String fext = fname.substring(dotPos);
+		if ( !fext.equals(".zip") ) {
+			DataInputStream distream = new DataInputStream(instr);
+			return distream;
+		}
+		else {
 
-   ZipInputStream zistream = new ZipInputStream(instr);
-
-
-   ZipEntry entry = zistream.getNextEntry();
-
-   BufferedInputStream bistream = new BufferedInputStream(zistream);
-   DataInputStream distream = new DataInputStream(bistream);
-
-   return distream;
-  }
+			ZipInputStream zistream = new ZipInputStream(instr);
 
 
+			ZipEntry entry = zistream.getNextEntry();
 
- }
+			BufferedInputStream bistream = new BufferedInputStream(zistream);
+			DataInputStream distream = new DataInputStream(bistream);
 
- public static DataOutputStream getDataOutputStream(String fname) throws IOException {
-
-  int dotPos=0;
-  int dp = fname.indexOf(".");
-  while(dp>0) {
-   dotPos=dp;
-   dp=fname.indexOf(".",dp+1);
-  }
-  String fext = fname.substring(dotPos);
-  if ( !fext.equals(".zip") ) {
-
-   FileOutputStream fostream = new FileOutputStream(fname);
-   BufferedOutputStream bostream = new BufferedOutputStream(fostream);
-   DataOutputStream dostream = new DataOutputStream(bostream);
-
-   return dostream;
-  }
-  else {
-   System.out.println("FHandler opening zipfile not supported!");
-   return null;
-  }
+			return distream;
+		}
 
 
 
- }
+	}
+
+	public static DataOutputStream getDataOutputStream(String fname) throws IOException {
+
+		int dotPos=0;
+		int dp = fname.indexOf(".");
+		while(dp>0) {
+			dotPos=dp;
+			dp=fname.indexOf(".",dp+1);
+		}
+		String fext = fname.substring(dotPos);
+		if ( !fext.equals(".zip") ) {
+
+			FileOutputStream fostream = new FileOutputStream(fname);
+			BufferedOutputStream bostream = new BufferedOutputStream(fostream);
+			DataOutputStream dostream = new DataOutputStream(bostream);
+
+			return dostream;
+		}
+		else {
+			System.out.println("FHandler opening zipfile not supported!");
+			return null;
+		}
+
+
+
+	}
 
 }

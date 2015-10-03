@@ -5,13 +5,12 @@ import org.bukkit.entity.Player;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.sanjay900.jgbe.emu.swinggui;
 import com.sanjay900.menus.api.IconCallback;
 
 public class ServerCallback extends IconCallback{
 
 	private int serverId;
-	private swinggui jb = swinggui.getInstance();
+	private GameboyPlugin plugin = GameboyPlugin.getInstance();
 
 	public ServerCallback(int serverId) {
 		this.serverId = serverId;
@@ -19,7 +18,7 @@ public class ServerCallback extends IconCallback{
 
 	@Override
 	public void run(Player player) {
-		jb.socketio.acceptPlayer = player.getUniqueId();
+		plugin.socketio.acceptPlayer = player.getUniqueId();
 		String server = String.valueOf(serverId);
 		JSONObject obj = new JSONObject();
 		JSONObject innerObject = new JSONObject();
@@ -32,7 +31,7 @@ public class ServerCallback extends IconCallback{
 		} catch (JSONException e) {
 			e.printStackTrace();
 		}
-		jb.socketio.client.emit("send", obj);
+		plugin.socketio.client.emit("send", obj);
 
 		
 		}

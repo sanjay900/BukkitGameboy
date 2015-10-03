@@ -22,12 +22,12 @@ import com.sanjay900.jgbe.emu.swinggui;
 
 public class ScreenDrawer implements Runnable{
 	public volatile boolean shutdown = false;
-	swinggui jb;
+	swinggui plugin;
 	ArmorStand[] holograml = new ArmorStand[144];
 	ArmorStand[] hologramr= new ArmorStand[144];
 	public ScreenDrawer(swinggui swinggui) {
 		
-		this.jb = swinggui;
+		this.plugin = swinggui;
 		Location l = new Location(Bukkit.getWorld("gba"), 77.0, 150.0, 30.0);
 		Location r = new Location(Bukkit.getWorld("gba"), 96.2, 150.0, 30.0);
 		for (int i = 0; i< 144; i++)  {
@@ -61,7 +61,7 @@ public class ScreenDrawer implements Runnable{
 				innerObject.put("pic", DatatypeConverter.printBase64Binary(os.toByteArray()));
 				obj.put("eventName", "gbpic"+serverId);
 				obj.put("object", innerObject);
-				//jb.socketio.client.emit("replayObject", obj);
+				//plugin.socketio.client.emit("replayObject", obj);
 				ds.close();
 				os.close();
 			} catch (JSONException | IOException e) {

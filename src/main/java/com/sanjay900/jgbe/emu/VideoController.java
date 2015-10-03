@@ -1,47 +1,50 @@
 package com.sanjay900.jgbe.emu;
-import java.io.*;
-import java.io.*;
+import java.awt.Color;
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferInt;
+import java.awt.image.WritableRaster;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 
-import javax.swing.*;
-
-import java.awt.*;
-import java.awt.image.*;
+import com.sanjay900.jgbe.bukkit.GameboyPlugin;
 
 
 public final class VideoController {
-	private static final int MIN_WIDTH = 160;
-	private static final int MIN_HEIGHT = 144;
-	private static BufferedImage drawImg[] = new BufferedImage[2];
-	private static int drawData[];
+	GameboyPlugin plugin = GameboyPlugin.getInstance();
+	private final int MIN_WIDTH = 160;
+	private final int MIN_HEIGHT = 144;
+	private BufferedImage drawImg[] = new BufferedImage[2];
+	private int drawData[];
 
-	private static int curDrawImg = 0;
+	private int curDrawImg = 0;
 
 	private int CurrentVRAMBank=0;
-	protected static int VRAM[]=new int[0x4000];
-	protected static int OAM[] =new int[0xa0];
+	protected int VRAM[]=new int[0x4000];
+	protected int OAM[] =new int[0xa0];
 
-	protected static boolean isCGB;
+	protected boolean isCGB;
 
 
-	protected static int LY=0;
-	protected static int LYC=0;
-	protected static int SCX=0;
-	protected static int SCY=0;
-	protected static int WX=0;
-	protected static int WY=0;
-	protected static int LCDC=0;
-	protected static int STAT=0;
-	private static int LCDCcntdwn=0;
+	protected int LY=0;
+	protected int LYC=0;
+	protected int SCX=0;
+	protected int SCY=0;
+	protected int WX=0;
+	protected int WY=0;
+	protected int LCDC=0;
+	protected int STAT=0;
+	private int LCDCcntdwn=0;
 
-	public static boolean useSubscanlineRendering = false;
+	public boolean useSubscanlineRendering = false;
 
-	protected static int curBGY;
-	protected static int curWNDY;
+	protected int curBGY;
+	protected int curWNDY;
 
 	protected int[][][] Scalerx4 = new int[0x100][4][4];
 
 
-	private static final int GRAYSHADES[][] = {  {0xf8, 0xf8, 0xf8},
+	private final int GRAYSHADES[][] = {  {0xf8, 0xf8, 0xf8},
 			{0xa8, 0xa8, 0xa8},
 			{0x60, 0x60, 0x60},
 			{0x00, 0x00, 0x00} };
@@ -54,24 +57,21 @@ public final class VideoController {
 	protected int OBPI=0;
 	private int OBPD[]=new int[8*4*2];
 
-	private static int blitImg[][] = new int[144][160];
-	private static int blitImg_prev[][] = new int[144][160];
-	private static int palColors[] = new int[8*4*2];
+	private int blitImg[][] = new int[144][160];
+	private int blitImg_prev[][] = new int[144][160];
+	private int palColors[] = new int[8*4*2];
 
-	private static int patpix[][][] = new int[4096][][];
-	private static boolean patdirty[] = new boolean[1024];
-	private static boolean anydirty = true;
+	private int patpix[][][] = new int[4096][][];
+	private boolean patdirty[] = new boolean[1024];
+	private boolean anydirty = true;
 
 
 	private long pfreq;
 	private long ptick;
 	private long ftick;
-
-	private static int scale = 1;
-	public static int nscale = 1;
-	private static int cfskip = 0;
-	public static int fskip = 1;
-	public static boolean MixFrames;
+	private int cfskip = 0;
+	public int fskip = 1;
+	public boolean MixFrames;
 	public boolean allow_writes_in_mode_2_3=true;
 
 	public void setGrayShade(int i, int j, Color c) {
@@ -121,7 +121,7 @@ public final class VideoController {
 		STAT_statemachine_state=0;
 		LCDCcntdwn=80;
 	}
-	
+
 	public void reset() {
 		CurrentVRAMBank=0;
 		LY=0;
@@ -130,7 +130,7 @@ public final class VideoController {
 		SCY=0;
 		WX=0;
 		WY=0;
-		LCDC=CPU.BIOS_enabled?0x00:0x91;
+		LCDC=plugin.cpu.BIOS_enabled?0x00:0x91;
 		STAT= 0x85 ;
 		STAT_statemachine_state=0;
 		LCDCcntdwn=80;
@@ -159,11 +159,15 @@ public final class VideoController {
 			VRAM[i] = 0;
 	}
 
-	public VideoController(CPU cpu, int image_width, int image_height) {
+	public VideoController(int image_width, int image_height) {
 
 		drawImg=new BufferedImage[2];
+		int width = MIN_WIDTH;
+		int height = MIN_HEIGHT;
 
-		scale();
+		drawImg[0]=new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+		drawImg[1]=new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+
 		reset();
 	}
 
@@ -235,24 +239,7 @@ public final class VideoController {
 		}
 	}
 
-
-
-
-
-
-
-	private static void scale() {
-		scale = nscale;
-		int width = scale*MIN_WIDTH;
-		int height = scale*MIN_HEIGHT;
-
-		drawImg[0]=new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-		drawImg[1]=new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-
-	}
-
-
-	public static BufferedImage getImage() {
+	public BufferedImage getImage() {
 		return drawImg[curDrawImg];
 	}
 
@@ -267,12 +254,11 @@ public final class VideoController {
 
 	}
 
-	static long lastms;
-	private static void blitImage() {
+	long lastms;
+	private void blitImage() {
 		cfskip--;
 		if (cfskip < 0) {
 			cfskip += fskip;
-			if (scale != nscale) scale();
 
 			WritableRaster wr = ((BufferedImage)drawImg[curDrawImg^1]).getRaster();
 			drawData = ((DataBufferInt)wr.getDataBuffer()).getData();
@@ -286,149 +272,11 @@ public final class VideoController {
 						blitImg_prev[y][x] = blitImg[y][x];
 					}
 				}
-
-			if (scale == 1) {
 				for (int y = 0; y < 144; ++y) {
 					int[] blitLine = blitImg[y];
 					System.arraycopy(blitLine, 0, drawData, y*160, 160);
 				}
-			}
-			else if (scale == 2) {
-
-				int ti1 = -1, ti2 = -1;
-				ti2 += 160*2;
-				for (int y = 0; y < 144; ++y) {
-					int yn = (y==0 )?0 :y-1;
-					int yp = (y==143)?143:y+1;
-					int[] blitLine2 = blitImg[y];
-					int[] blitLine1 = blitImg[yn];
-					int[] blitLine3 = blitImg[yp];
-					for (int x = 0; x < 160; ++x) {
-						int xn = (x==0 )?0 :x-1;
-						int xp = (x==159)?159:x+1;
-						if (!((blitLine2[xn]) == (blitLine2[xp]))
-								&& !((blitLine1[x]) == (blitLine3[x]))) {
-							drawData[++ti1] = ((blitLine1[x]) == (blitLine2[xn])) ? blitLine2[xn] : blitLine2[x];
-							drawData[++ti1] = ((blitLine1[x]) == (blitLine2[xp])) ? blitLine2[xp] : blitLine2[x];
-							drawData[++ti2] = ((blitLine3[x]) == (blitLine2[xn])) ? blitLine2[xn] : blitLine2[x];
-							drawData[++ti2] = ((blitLine3[x]) == (blitLine2[xp])) ? blitLine2[xp] : blitLine2[x];
-						}
-						else {
-							int col = blitLine2[x];
-							drawData[++ti1] = col;
-							drawData[++ti1] = col;
-							drawData[++ti2] = col;
-							drawData[++ti2] = col;
-						}
-					}
-					ti1 += 160*2;
-					ti2 += 160*2;
-				}
-			} else if (scale == 3) {
-
-				int ti1 = -1, ti2 = -1, ti3 = -1;
-				ti2 += 160*3;
-				ti3 += 160*3*2;
-				for (int y = 0; y < 144; ++y) {
-					int yn = (y==0 )?0 :y-1;
-					int yp = (y==143)?143:y+1;
-					int[] blitLine2 = blitImg[y];
-					int[] blitLine1 = blitImg[yn];
-					int[] blitLine3 = blitImg[yp];
-					for (int x = 0; x < 160; ++x) {
-						int xn = (x==0 )?0 :x-1;
-						int xp = (x==159)?159:x+1;
-						if (!((blitLine1[x]) == (blitLine3[x])) && !((blitLine2[xn]) == (blitLine2[xp]))) {
-							drawData[++ti1] = ((blitLine2[xn]) == (blitLine1[x])) ? blitLine2[xn] : blitLine2[x];
-							drawData[++ti1] = (((blitLine2[xn]) == (blitLine1[x])) && !((blitLine2[x]) == (blitLine1[xp]))) || (((blitLine1[x]) == (blitLine2[xp])) && !((blitLine2[x]) == (blitLine1[xn])))? blitLine1[x] : blitLine2[x];
-							drawData[++ti1] = ((blitLine1[x]) == (blitLine2[xp])) ? blitLine2[xp] : blitLine2[x];
-							drawData[++ti2] = (((blitLine2[xn]) == (blitLine1[x])) && !((blitLine2[x]) == (blitLine3[xn]))) || (((blitLine2[xn]) == (blitLine3[x])) && !((blitLine2[x]) == (blitLine1[xn])))? blitLine2[xn] : blitLine2[x];
-							drawData[++ti2] = blitLine2[x];
-							drawData[++ti2] = (((blitLine1[x]) == (blitLine2[xp])) && !((blitLine2[x]) == (blitLine3[xp]))) || (((blitLine3[x]) == (blitLine2[xp])) && !((blitLine2[x]) == (blitLine1[xp])))? blitLine2[xp] : blitLine2[x];
-							drawData[++ti3] = ((blitLine2[xn]) == (blitLine3[x])) ? blitLine2[xn] : blitLine2[x];
-							drawData[++ti3] = (((blitLine2[xn]) == (blitLine3[x])) && !((blitLine2[x]) == (blitLine3[xp]))) || (((blitLine3[x]) == (blitLine2[xp])) && !((blitLine2[x]) == (blitLine3[xn])))? blitLine3[x] : blitLine2[x];
-							drawData[++ti3] = ((blitLine3[x]) == (blitLine2[xp])) ? blitLine2[xp] : blitLine2[x];
-						} else {
-							int col = blitLine2[x];
-							drawData[++ti1] = col;
-							drawData[++ti1] = col;
-							drawData[++ti1] = col;
-							drawData[++ti2] = col;
-							drawData[++ti2] = col;
-							drawData[++ti2] = col;
-							drawData[++ti3] = col;
-							drawData[++ti3] = col;
-							drawData[++ti3] = col;
-						}
-					}
-					ti1 += 160*3*2;
-					ti2 += 160*3*2;
-					ti3 += 160*3*2;
-				}
-			}
-			else if (scale == 4) {
-
-				int ti1 = -1, ti2 = -1, ti3 = -1, ti4 = -1;
-				ti2 += 160*4;
-				ti3 += 160*4*2;
-				ti4 += 160*4*3;
-				for (int y = 0; y < 144; ++y) {
-					int yn = (y==0 )?0 :y-1;
-					int yp = (y==143)?143:y+1;
-					int[] blitLine2 = blitImg[y];
-					int[] blitLine1 = blitImg[yn];
-					int[] blitLine3 = blitImg[yp];
-					for (int x = 0; x < 160; ++x) {
-						int xn = (x==0 )?0 :x-1;
-						int xp = (x==159)?159:x+1;
-
-						if (((blitLine1[x]) == (blitLine2[xn]))) {
-							drawData[++ti1] = blitLine1[x];
-							drawData[++ti1] = blitLine1[x];
-							drawData[++ti2] = blitLine1[x];
-						} else {
-							drawData[++ti1] = blitLine2[x];
-							drawData[++ti1] = blitLine2[x];
-							drawData[++ti2] = blitLine2[x];
-						}
-						drawData[++ti2] = blitLine2[x];
-						drawData[++ti2] = blitLine2[x];
-						if (((blitLine1[x]) == (blitLine2[xp]))) {
-							drawData[++ti1] = blitLine1[x];
-							drawData[++ti1] = blitLine1[x];
-							drawData[++ti2] = blitLine1[x];
-						} else {
-							drawData[++ti1] = blitLine2[x];
-							drawData[++ti1] = blitLine2[x];
-							drawData[++ti2] = blitLine2[x];
-						}
-						if (((blitLine3[x]) == (blitLine2[xn]))) {
-							drawData[++ti3] = blitLine3[x];
-							drawData[++ti4] = blitLine3[x];
-							drawData[++ti4] = blitLine3[x];
-						} else {
-							drawData[++ti3] = blitLine2[x];
-							drawData[++ti4] = blitLine2[x];
-							drawData[++ti4] = blitLine2[x];
-						}
-						drawData[++ti3] = blitLine2[x];
-						drawData[++ti3] = blitLine2[x];
-						if (((blitLine3[x]) == (blitLine2[xp]))) {
-							drawData[++ti3] = blitLine3[x];
-							drawData[++ti4] = blitLine3[x];
-							drawData[++ti4] = blitLine3[x];
-						} else {
-							drawData[++ti3] = blitLine2[x];
-							drawData[++ti4] = blitLine2[x];
-							drawData[++ti4] = blitLine2[x];
-						}
-					}
-					ti1 += 160*4*3;
-					ti2 += 160*4*3;
-					ti3 += 160*4*3;
-					ti4 += 160*4*3;
-				}
-			}
+			
 			curDrawImg ^= 1;
 		}
 		curBGY = 0;
@@ -441,7 +289,7 @@ public final class VideoController {
 
 		int [][] curColors = GrayColors[index];
 
-		int value = CPU.IOP[index+0x47];
+		int value = plugin.cpu.IOP[index+0x47];
 
 
 
@@ -523,7 +371,7 @@ public final class VideoController {
 		return OBPD[OBPI&0x3f];
 	}
 
-	private static void updatepatpix() {
+	private void updatepatpix() {
 		if (!anydirty )
 			return;
 
@@ -557,11 +405,11 @@ public final class VideoController {
 
 	}
 
-	static int STAT_statemachine_state = 0;
-	static int mode3duration = 0;
-	static int scanlinepos = 0;
-	public static int render(int cycles) {
-		
+	int STAT_statemachine_state = 0;
+	int mode3duration = 0;
+	int scanlinepos = 0;
+	public int render(int cycles) {
+
 		LCDCcntdwn -= cycles;
 		while (LCDCcntdwn <= 0) {
 			switch (STAT_statemachine_state) {
@@ -593,8 +441,8 @@ public final class VideoController {
 
 				LCDCcntdwn += (isCGB ? 376 : 372) - mode3duration;
 				STAT &= 0xFC;
-				if ((STAT&(1<<3))!=0) CPU.triggerInterrupt(1);
-				if (LY<144) CPU.elapseTime(CPU.hblank_dma());
+				if ((STAT&(1<<3))!=0) plugin.cpu.triggerInterrupt(1);
+				if (LY<144) plugin.cpu.elapseTime(plugin.cpu.hblank_dma());
 				++STAT_statemachine_state;
 				break;
 			case 2:
@@ -610,17 +458,17 @@ public final class VideoController {
 					if (LY == LYC) {
 						STAT = STAT | (1 << 2);
 						if ((STAT&(1<<6))!=0) {
-							CPU.triggerInterrupt(1);
+							plugin.cpu.triggerInterrupt(1);
 						}
 					}
-					if ((STAT&(1<<5))!=0) CPU.triggerInterrupt(1);
+					if ((STAT&(1<<5))!=0) plugin.cpu.triggerInterrupt(1);
 					STAT_statemachine_state=0;
 				}
 				else {
 					STAT = (STAT & 0xFC) | 1;
 					++STAT_statemachine_state;
-					if((LCDC&0x80)!=0) CPU.triggerInterrupt(0);
-					if ((STAT&(1<<4))!=0) CPU.triggerInterrupt(1);
+					if((LCDC&0x80)!=0) plugin.cpu.triggerInterrupt(0);
+					if ((STAT&(1<<4))!=0) plugin.cpu.triggerInterrupt(1);
 					blitImage();
 				}
 				break;
@@ -628,7 +476,7 @@ public final class VideoController {
 				if (LY==LYC) {
 					STAT = STAT | 4;
 					if((STAT&(1<<6))!=0) {
-						CPU.triggerInterrupt(1);
+						plugin.cpu.triggerInterrupt(1);
 					}
 				}
 				if (LY==153) LY=0;
@@ -649,15 +497,14 @@ public final class VideoController {
 			case 6:
 				STAT = (STAT&0xfc) | 2;
 				if ((LY==LYC)&&(STAT&(1<<6))!=0) {
-					CPU.triggerInterrupt(1);
+					plugin.cpu.triggerInterrupt(1);
 				}
-				if ((STAT&(1<<5))!=0) CPU.triggerInterrupt(1);
+				if ((STAT&(1<<5))!=0) plugin.cpu.triggerInterrupt(1);
 				LCDCcntdwn += 80;
 				STAT_statemachine_state = 0;
 				break;
 			default:
-				if (!(false)) throw new Error("Assertion failed: " + "false");
-				break;
+				throw new Error("Assertion failed: " + "false");
 			}
 		}
 		if (!(LCDCcntdwn > 0)) throw new Error("Assertion failed: " + "LCDCcntdwn > 0");
@@ -665,11 +512,11 @@ public final class VideoController {
 	}
 
 
-	static int pixpos = 0;
-	static int cyclepos = 0;
-	static int[] zbuffer = new int[160];
-	static int curSprite = 0;
-	private static void renderScanlinePart() {
+	int pixpos = 0;
+	int cyclepos = 0;
+	int[] zbuffer = new int[160];
+	int curSprite = 0;
+	private void renderScanlinePart() {
 		if((STAT_statemachine_state != 1)) return;
 		blitLine = blitImg[LY];
 		if((LCDC&0x80)==0) {
@@ -682,7 +529,7 @@ public final class VideoController {
 			return;
 		}
 
-		int newLCDCcntdwn = (int)(LCDCcntdwn - (int)(CPU.TotalCycleCount - CPU.lastVCRenderCycleCount));
+		int newLCDCcntdwn = (int)(LCDCcntdwn - (int)(plugin.cpu.TotalCycleCount - plugin.cpu.lastVCRenderCycleCount));
 		int cyclesToRender = (mode3duration - newLCDCcntdwn - cyclepos - 4);
 		cyclepos += cyclesToRender;
 
@@ -787,9 +634,9 @@ public final class VideoController {
 		}
 	}
 
-	static int spriteCountOnScanline;
-	static int[] spritesOnScanline = new int[40];
-	private static int setSpritesOnScanline() {
+	int spriteCountOnScanline;
+	int[] spritesOnScanline = new int[40];
+	private int setSpritesOnScanline() {
 		int sprYSize = ((LCDC&(1<<2))!=0)?16:8;
 		int count = 0;
 
@@ -832,13 +679,13 @@ public final class VideoController {
 		if(index < 0xa000) {
 			if(allow_writes_in_mode_2_3 || ((LCDC&0x80)==0) || ((STAT&3)!=3))
 				return VRAM[index-0x8000+CurrentVRAMBank];
-			System.out.println("WARNING: Read from VRAM["+String.format("0x%04x",index)+"] denied during mode "+(STAT&3)+", PC="+String.format("0x%04x",(CPU.getPC())));
+			System.out.println("WARNING: Read from VRAM["+String.format("0x%04x",index)+"] denied during mode "+(STAT&3)+", PC="+String.format("0x%04x",(plugin.cpu.getPC())));
 			return 0xff;
 		}
 		if((index>0xfdff) && (index<0xfea0)) {
 			if(allow_writes_in_mode_2_3 || ((LCDC&0x80)==0) || ((STAT&2)==0))
 				return OAM[index-0xfe00];
-			System.out.println("WARNING: Read from OAM["+String.format("0x%04x",index)+"] denied during mode "+(STAT&3)+", PC="+String.format("0x%04x",(CPU.getPC())));
+			System.out.println("WARNING: Read from OAM["+String.format("0x%04x",index)+"] denied during mode "+(STAT&3)+", PC="+String.format("0x%04x",(plugin.cpu.getPC())));
 			return 0xff;
 		}
 		int b = 0xff;
@@ -872,7 +719,7 @@ public final class VideoController {
 		case 0x07:
 		case 0x08:
 		case 0x09:
-			b = CPU.IOP[index-0xff00];
+			b = plugin.cpu.IOP[index-0xff00];
 			break;
 		case 0x0a:
 			b = WY;
@@ -881,7 +728,7 @@ public final class VideoController {
 			b = WX;
 			break;
 		case 0x0d:
-			b = CPU.doublespeed ? (1<<7) : 0;
+			b = plugin.cpu.doublespeed ? (1<<7) : 0;
 			break;
 		case 0x0f:
 			b = getcurVRAMBank();
@@ -891,7 +738,7 @@ public final class VideoController {
 		case 0x13:
 		case 0x14:
 		case 0x15:
-			b = CPU.IOP[index-0xff00];
+			b = plugin.cpu.IOP[index-0xff00];
 			break;
 		case 0x28:
 			b = BGPI;
@@ -907,7 +754,7 @@ public final class VideoController {
 			break;
 		case 0x2c:
 			System.out.printf("WARNING: VC.read(): Read from *undocumented* IO port $%04x\n", index);
-			b = CPU.IOP[index-0xff00] | 0xfe;
+			b = plugin.cpu.IOP[index-0xff00] | 0xfe;
 			break;
 		default:
 			System.out.printf("TODO: VC.read(): Read from IO port $%04x\n", index);
@@ -923,7 +770,7 @@ public final class VideoController {
 				anydirty = true;
 				return;
 			}
-			System.out.println("WARNING: Write to VRAM["+String.format("0x%04x",index)+"] denied during mode "+(STAT&3)+", PC="+String.format("0x%04x",(CPU.getPC())));
+			System.out.println("WARNING: Write to VRAM["+String.format("0x%04x",index)+"] denied during mode "+(STAT&3)+", PC="+String.format("0x%04x",(plugin.cpu.getPC())));
 			return;
 		}
 		if((index > 0xfdff) && (index<0xfea0)) {
@@ -931,7 +778,7 @@ public final class VideoController {
 				OAM[index-0xfe00]=value;
 				return;
 			}
-			System.out.println("WARNING: Write to OAM["+String.format("0x%04x",index)+"] denied during mode "+(STAT&3)+", PC="+String.format("0x%04x",(CPU.getPC())));
+			System.out.println("WARNING: Write to OAM["+String.format("0x%04x",index)+"] denied during mode "+(STAT&3)+", PC="+String.format("0x%04x",(plugin.cpu.getPC())));
 			return;
 		}
 		switch(index&0x3f) {
@@ -943,7 +790,7 @@ public final class VideoController {
 			STAT = (STAT&0x87)|(value&0x78);
 			if (!isCGB && ((STAT & 2)==0) && ((LCDC&0x80)!=0)) {
 
-				CPU.triggerInterrupt(1);
+				plugin.cpu.triggerInterrupt(1);
 			}
 			break;
 		case 0x02:
@@ -964,26 +811,26 @@ public final class VideoController {
 			STAT &= ~(1<<2);
 			if (LYC != value && LY==value && (STAT&(1<<6))!=0) {
 				STAT |= (1<<2);
-				CPU.triggerInterrupt(1);
+				plugin.cpu.triggerInterrupt(1);
 			}
 			LYC = value;
 			break;
 		case 0x06:{
 
 
-			CPU.last_memory_access=CPU.last_memory_access_internal;
+			plugin.cpu.last_memory_access=plugin.cpu.last_memory_access_internal;
 
 			for(int i=0; i<0xa0; ++i){
-				CPU.write(0xfe00|i, CPU.read(i+(value<<8)));
+				plugin.cpu.write(0xfe00|i, plugin.cpu.read(i+(value<<8)));
 			}
-			CPU.last_memory_access_internal=CPU.last_memory_access;
+			plugin.cpu.last_memory_access_internal=plugin.cpu.last_memory_access;
 		} break;
 		case 0x07:
 		case 0x08:
 		case 0x09:
 			if(useSubscanlineRendering)
 				renderScanlinePart();
-			CPU.IOP[index-0xff00] = value;
+			plugin.cpu.IOP[index-0xff00] = value;
 			updateMonoColData(index-0xff47);
 			break;
 		case 0x0a:
@@ -993,7 +840,7 @@ public final class VideoController {
 			WX = value;
 			break;
 		case 0x0d:
-			CPU.speedswitch = ((value&1)!=0);
+			plugin.cpu.speedswitch = ((value&1)!=0);
 			break;
 		case 0x0f:
 			selectVRAMBank(value&1);
@@ -1002,28 +849,28 @@ public final class VideoController {
 		case 0x12:
 		case 0x13:
 		case 0x14:
-			CPU.IOP[index-0xff00] = value;
+			plugin.cpu.IOP[index-0xff00] = value;
 			break;
 		case 0x15:
-			int mode = ((CPU.hblank_dma_state|value) & 0x80);
+			int mode = ((plugin.cpu.hblank_dma_state|value) & 0x80);
 			if (mode == 0) {
-				int src = ((CPU.IOP[0x51]<<8)|CPU.IOP[0x52]) & 0xfff0;
-				int dst = (((CPU.IOP[0x53]<<8)|CPU.IOP[0x54]) & 0x1ff0) | 0x8000;
+				int src = ((plugin.cpu.IOP[0x51]<<8)|plugin.cpu.IOP[0x52]) & 0xfff0;
+				int dst = (((plugin.cpu.IOP[0x53]<<8)|plugin.cpu.IOP[0x54]) & 0x1ff0) | 0x8000;
 				int len = ((value & 0x7f)+1)<<4;
-				System.out.println("WARNING: CPU.write(): TODO: Untimed H-DMA Transfer");
+				System.out.println("WARNING: plugin.cpu.write(): TODO: Untimed H-DMA Transfer");
 
 
 				for (int i = 0; i < len; ++i)
-					write(dst++, CPU.read(src++));
-				CPU.IOP[0x51] = src >> 8;
-				CPU.IOP[0x52] = src & 0xF0;
-				CPU.IOP[0x53] = 0x1F & (dst >> 8);
-				CPU.IOP[0x54] = dst & 0xF0;
-				CPU.IOP[0x55] = 0xff;
+					write(dst++, plugin.cpu.read(src++));
+				plugin.cpu.IOP[0x51] = src >> 8;
+				plugin.cpu.IOP[0x52] = src & 0xF0;
+				plugin.cpu.IOP[0x53] = 0x1F & (dst >> 8);
+				plugin.cpu.IOP[0x54] = dst & 0xF0;
+				plugin.cpu.IOP[0x55] = 0xff;
 
 			} else {
-				CPU.hblank_dma_state = value;
-				CPU.IOP[0x55] = value & 0x7f;
+				plugin.cpu.hblank_dma_state = value;
+				plugin.cpu.IOP[0x55] = value & 0x7f;
 			}
 			break;
 		case 0x28:
@@ -1040,7 +887,7 @@ public final class VideoController {
 			break;
 		case 0x2c:
 			System.out.printf("WARNING: VC.write(): Write %02x to *undocumented* IO port $%04x\n",value, index);
-			CPU.IOP[index-0xff00] = value;
+			plugin.cpu.IOP[index-0xff00] = value;
 			break;
 		default:
 			System.out.printf("TODO: VC.write(): Write %02x to IO port $%04x\n",value, index);
@@ -1061,31 +908,31 @@ public final class VideoController {
 
 
 
-	private static int TileData;
-	private static int BGTileMap;
-	private static int WindowTileMap;
-	private static int bgY;
-	private static int bgTileY;
-	private static int bgOffsY;
-	private static int bgX;
-	private static int bgTileX;
-	private static int bgOffsX;
-	private static int windX;
-	private static int tilebufBG[] = new int[0x300];
-	private static int[] blitLine;
+	private int TileData;
+	private int BGTileMap;
+	private int WindowTileMap;
+	private int bgY;
+	private int bgTileY;
+	private int bgOffsY;
+	private int bgX;
+	private int bgTileX;
+	private int bgOffsX;
+	private int windX;
+	private int tilebufBG[] = new int[0x300];
+	private int[] blitLine;
 
 
 
 
 
 
-	public static void renderScanline() {
+	public void renderScanline() {
 
 		if (cfskip != 0) return;
 		if((LCDC&(1<<7))!=0) {
 
 			updatepatpix();
-			
+
 			blitLine = blitImg[LY];
 
 			TileData = ((LCDC&(1<<4))==0) ? 0x0800 : 0x0000;
@@ -1113,7 +960,7 @@ public final class VideoController {
 
 
 
-	private static void calcBGTileBuf() {
+	private void calcBGTileBuf() {
 
 
 
@@ -1151,7 +998,7 @@ public final class VideoController {
 		}
 	}
 
-	private static void renderScanlineBG() {
+	private void renderScanlineBG() {
 		int bufMap = 0;
 		int cnt = windX;
 		if (cnt == 0) return;
@@ -1198,7 +1045,7 @@ public final class VideoController {
 					}
 	}
 
-	private static void calcWindTileBuf() {
+	private void calcWindTileBuf() {
 		int tileMap = WindowTileMap + (bgTileY*32);
 		int attrMap = tileMap + 0x2000;
 		int bufMap = 0;
@@ -1232,7 +1079,7 @@ public final class VideoController {
 		}
 	}
 
-	private static void renderScanlineWindow() {
+	private void renderScanlineWindow() {
 		int bufMap = 0;
 		int curX = ((windX)<(0)?(0):(windX));
 		int cnt = 160-curX;
@@ -1274,7 +1121,7 @@ public final class VideoController {
 		}
 	}
 
-	private static void renderScanlineSprites() {
+	private void renderScanlineSprites() {
 
 
 

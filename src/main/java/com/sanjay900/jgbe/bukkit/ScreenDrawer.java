@@ -26,16 +26,14 @@ import org.json.JSONObject;
 
 import com.sanjay900.jgbe.emu.CPU;
 import com.sanjay900.jgbe.emu.VideoController;
-import com.sanjay900.jgbe.emu.swinggui;
 
 public class ScreenDrawer implements Runnable{
 	public volatile boolean shutdown = false;
 	protected static Logger logger = Logger.getLogger("gameboy");
 	private final List<MapIcon> empty = Collections.unmodifiableList(new ArrayList<MapIcon>());
 	int serverId = Bukkit.getServer().getPort()-25580;
-	swinggui jb;
-	public ScreenDrawer(swinggui swinggui) {
-		this.jb = swinggui;
+	GameboyPlugin plugin = GameboyPlugin.getInstance();
+	public ScreenDrawer() {
 		MapHelper.removeRenderers(Bukkit.getMap((short) 0));
 		MapHelper.removeRenderers(Bukkit.getMap((short) 1));
 		MapHelper.removeRenderers(Bukkit.getMap((short) 4));
@@ -57,8 +55,7 @@ public class ScreenDrawer implements Runnable{
 	@Override
 	public void run() {
 		while (!shutdown){
-			if (CPU.cartridge != null && VideoController.getImage() != null) {
-
+			if (plugin.cpu.cartridge != null && plugin.cpu.VC.getImage() != null) {
 				//int[] pixels = new int[width*height];
 				//top left
 				byte[] data0 = new byte[128 * 128];
@@ -78,7 +75,7 @@ public class ScreenDrawer implements Runnable{
 							} else {
 								//int i = VideoController.getImage().getRGB(x-xsp, y-ysp);
 								//pixels[(y-ysp)*width+x-xsp] = i;
-								data0[y * 128 + x]=MapHelper.matchColor(VideoController.getImage().getRGB(x-xsp, y-ysp));
+								data0[y * 128 + x]=MapHelper.matchColor(plugin.cpu.VC.getImage().getRGB(x-xsp, y-ysp));
 							}
 						}
 						if (x >= xamt) {
@@ -89,7 +86,7 @@ public class ScreenDrawer implements Runnable{
 							} else {
 								//int i = VideoController.getImage().getRGB(xamt+x, y-ysp);
 								//pixels[(y-ysp)*width+xamt+x] = i;
-								data1[y * 128 + x]=MapHelper.matchColor(VideoController.getImage().getRGB(xamt+x, y-ysp));
+								data1[y * 128 + x]=MapHelper.matchColor(plugin.cpu.VC.getImage().getRGB(xamt+x, y-ysp));
 							}
 						}
 						if (x < xsp) {
@@ -100,7 +97,7 @@ public class ScreenDrawer implements Runnable{
 							} else {
 								//int i = VideoController.getImage().getRGB(x-xsp, y+yamt);
 								//pixels[(y+yamt)*width+x-xsp] = i;
-								data2[y * 128 + x]=MapHelper.matchColor(VideoController.getImage().getRGB(x-xsp, y+yamt));
+								data2[y * 128 + x]=MapHelper.matchColor(plugin.cpu.VC.getImage().getRGB(x-xsp, y+yamt));
 							}
 						}
 						if (x >= xamt || y >= yamt) {
@@ -108,7 +105,7 @@ public class ScreenDrawer implements Runnable{
 						} else {
 							//int i = VideoController.getImage().getRGB(xamt+x, yamt+y);
 							//pixels[(y+yamt)*width+xamt+x] = i;
-							data3[y * 128 + x] =MapHelper.matchColor(VideoController.getImage().getRGB(xamt+x, yamt+y));
+							data3[y * 128 + x] =MapHelper.matchColor(plugin.cpu.VC.getImage().getRGB(xamt+x, yamt+y));
 						}
 					}
 				}
@@ -122,13 +119,10 @@ public class ScreenDrawer implements Runnable{
 				try {		
 					ImageIO.setUseCache(false);
 					ByteArrayOutputStream baos = new ByteArrayOutputStream ();
-					ImageIO.write(VideoController.getImage(),"gif",baos);
+					ImageIO.write(plugin.cpu.VC.getImage(),"gif",baos);
 					JSONObject obj = new JSONObject();
-					obj.put("pic", Base64.encodeBase64String(baos.toByteArray()));
-					jb.socketio.getHandler().sendGlobalMessage("gbpic"+serverId, obj);
-				} catch (JSONException e) {
-					e.printStackTrace();
-				} catch (IOException e) {
+					plugin.socketio.getHandler().client.send("gbpic"+serverId,baos.toByteArray());
+				}  catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}

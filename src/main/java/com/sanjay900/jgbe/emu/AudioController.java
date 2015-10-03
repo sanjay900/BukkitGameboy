@@ -7,8 +7,11 @@ import org.bukkit.Bukkit;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 
+import com.sanjay900.jgbe.bukkit.GameboyPlugin;
+
 
 public final class AudioController {
+	GameboyPlugin plugin = GameboyPlugin.getInstance();
 	protected boolean isMuted=false;
 	private boolean isEnabled=true;
 	private int IO[];
@@ -50,9 +53,7 @@ public final class AudioController {
 	protected SoundRegister S2;
 	protected SoundRegister S3;
 	protected SoundRegister S4;
-
-	protected CPU cpu;
-
+	
 	public boolean channelActive(int i) {
 		if (!(i>=1)) throw new Error("Assertion failed: " + "i>=1"); if (!(i<=4)) throw new Error("Assertion failed: " + "i<=4");
 		return channelactive[i];
@@ -68,8 +69,7 @@ public final class AudioController {
 		return channelactive[i];
 	}
 
-	public AudioController(CPU cpu) {
-		this.cpu = cpu;
+	public AudioController() {
 		IO = new int[0x30];
 		cyclesLeftToRender=0;
 		S1=new SoundRegister();
@@ -142,7 +142,7 @@ public final class AudioController {
 		S3.on = IO[0x0a] >> 7;
 		if (S3.on!=0) for (i = 0; i < 0xf; i++)
 			IO[i+0x20] = 0x13 ^ IO[i+0x21];
-		IO[0x2f] = 0x13 ^ cpu.VC.LCDC;
+		IO[0x2f] = 0x13 ^ plugin.cpu.VC.LCDC;
 	}
 
 	void s4_init() {
@@ -157,7 +157,7 @@ public final class AudioController {
 	}
 	double a = Math.pow(2d, 1d/12d);
 	public void playToneFreq(float frequency, int amplitude) {
-		Bukkit.getScheduler().runTaskAsynchronously(swinggui.instance, new Runnable(){
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable(){
 
 			@Override
 			public void run() {
@@ -195,7 +195,7 @@ public final class AudioController {
 		});
 	}
 	public void playDrumFreq(float frequency, int amplitude) {
-		 Bukkit.getScheduler().runTaskAsynchronously(swinggui.instance, new Runnable(){
+		 Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable(){
 
 				@Override
 				public void run() {
@@ -310,7 +310,7 @@ public final class AudioController {
 		SweepTimerTick=false;
 
 
-		int[] w=cpu.isCGB()?cgbwave:dmgwave;
+		int[] w=plugin.cpu.isCGB()?cgbwave:dmgwave;
 		for (int i = 0; i < 0x10; ++i)
 			WAVE[i]=w[i];
 		for (int i = 0; i < 0x10; ++i)
@@ -329,7 +329,6 @@ public final class AudioController {
 		try {
 			Thread.sleep(10);
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		IO[0x16] = (IO[0x16]&0xf0) | S1.on | (S2.on<<1) | (S3.on<<2) | (S4.on<<3);

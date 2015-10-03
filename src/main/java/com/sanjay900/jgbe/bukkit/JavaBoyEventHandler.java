@@ -34,7 +34,6 @@ import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import com.sanjay900.jgbe.emu.CPU;
 import com.sanjay900.jgbe.emu.FHandler;
-import com.sanjay900.jgbe.emu.swinggui;
 import com.sanjay900.menus.api.Icon;
 import com.sanjay900.menus.api.Menu;
 import com.sanjay900.nmsUtil.events.PlayerPushedKeyEvent;
@@ -42,19 +41,19 @@ import com.sanjay900.nmsUtil.util.Button;
 import com.sanjay900.nmsUtil.util.Cooldown;
 
 public class JavaBoyEventHandler implements Listener{
-	swinggui jb = swinggui.getInstance();
+	GameboyPlugin plugin = GameboyPlugin.getInstance();
 	public Menu menu;
 	int serverId;
 	public String cart = "";
 	public JavaBoyEventHandler() {
 		serverId= Bukkit.getServer().getPort()-25580;
-		menu = new Menu(this.jb, ChatColor.BLUE+"Gameboy Link Menu",9, null);
-		Bukkit.getPluginManager().registerEvents(this, jb);
+		menu = new Menu(this.plugin, ChatColor.BLUE+"Gameboy Link Menu",9, null);
+		Bukkit.getPluginManager().registerEvents(this, plugin);
 	}
 	@EventHandler
 	public void onJoin(final PlayerJoinEvent evt) {
-		if (jb.gp != null) {
-			Bukkit.getOnlinePlayers().forEach(player -> Bukkit.getOnlinePlayers().forEach(player::hidePlayer));
+		if (plugin.gp != null) {
+			Bukkit.getOnlinePlayers().stream().forEach(player -> Bukkit.getOnlinePlayers().stream().forEach(player::hidePlayer));
 			evt.getPlayer().setAllowFlight(true);
 			evt.getPlayer().setFlying(true);
 			evt.getPlayer().getInventory().clear();
@@ -65,11 +64,11 @@ public class JavaBoyEventHandler implements Listener{
 			l.setDirection(new Vector (0,0,-1));
 			evt.getPlayer().teleport(l);
 		}else if (!cart.equals("")) {
-			Bukkit.getScheduler().runTaskLater(jb, ()->{
-				if (jb.gp != null) {
-					CPU.severLink();
+			Bukkit.getScheduler().runTaskLater(plugin, ()->{
+				if (plugin.gp != null) {
+					plugin.cpu.severLink();
 				}
-				jb.gp = new GameboyPlayer(evt.getPlayer(),cart);
+				plugin.gp = new GameboyPlayer(evt.getPlayer(),cart);
 				cart = "";
 			}, 40l);
 		}
@@ -116,7 +115,7 @@ public class JavaBoyEventHandler implements Listener{
 
 	}
 	public void onClick(final Player pl, Action action) {
-		if (jb.gp == null) return;
+		if (plugin.gp == null) return;
 		ItemStack it = pl.getItemInHand();
 		final Button buttonPressed;
 		if (it.hasItemMeta()
@@ -135,7 +134,7 @@ public class JavaBoyEventHandler implements Listener{
 			ByteArrayDataOutput out = ByteStreams.newDataOutput();
 			out.writeUTF("Connect");
 			out.writeUTF("lobby");
-			pl.sendPluginMessage(jb, "BungeeCord", out.toByteArray());
+			pl.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
 			return;
 		}
 
@@ -178,45 +177,45 @@ public class JavaBoyEventHandler implements Listener{
 		} else {
 			return;
 		}
-		jb.gp.keyToggled(buttonPressed,true);
-		Bukkit.getScheduler().runTaskLater(jb, new Runnable(){
+		plugin.gp.keyToggled(buttonPressed,true);
+		Bukkit.getScheduler().runTaskLater(plugin, new Runnable(){
 
 			@Override
 			public void run() {
-				jb.gp.keyToggled(buttonPressed,false);
+				plugin.gp.keyToggled(buttonPressed,false);
 			}}, 10l);
 
 	}
 	@EventHandler
 	public void pushedKey(final PlayerPushedKeyEvent evt) {
-		if (jb.gp != null) {
+		if (plugin.gp != null) {
 			if (evt.getButtonsPressed().contains(Button.OPENINVENTORY)) {
-				if (jb.gp != null) {
-					jb.gp.keyToggled(Button.OPENINVENTORY, true);
+				if (plugin.gp != null) {
+					plugin.gp.keyToggled(Button.OPENINVENTORY, true);
 					evt.setCancelled(true);
-					Bukkit.getScheduler().runTaskLater(jb, new Runnable(){
+					Bukkit.getScheduler().runTaskLater(plugin, new Runnable(){
 						@Override
 						public void run() {
 							if (Cooldown.tryCooldown(evt.getPlayer(), "start", 200))
-								jb.gp.keyToggled(Button.OPENINVENTORY, false);
+								plugin.gp.keyToggled(Button.OPENINVENTORY, false);
 						}}, 4l);
 				}
 				return;
 			}
 			if (evt.getButtonsPressed().contains(Button.DROPITEM)) {
-				jb.gp.keyToggled(Button.DROPITEM, true);
+				plugin.gp.keyToggled(Button.DROPITEM, true);
 				evt.setCancelled(true);
-				Bukkit.getScheduler().runTaskLater(jb, new Runnable(){
+				Bukkit.getScheduler().runTaskLater(plugin, new Runnable(){
 
 					@Override
 					public void run() {
 						if (Cooldown.tryCooldown(evt.getPlayer(), "select", 200))
-							jb.gp.keyToggled(Button.DROPITEM, false);
+							plugin.gp.keyToggled(Button.DROPITEM, false);
 					}}, 4l);
 				return;
 			}
 			for (Button b: Button.values()) {
-				jb.gp.keyToggled(b, evt.getButtonsPressed().contains(b));
+				plugin.gp.keyToggled(b, evt.getButtonsPressed().contains(b));
 			}				
 		}
 	}
@@ -231,31 +230,30 @@ public class JavaBoyEventHandler implements Listener{
 		leaveGame(evt.getPlayer());
 	}
 	private void leaveGame(Player p) {
-		System.out.println(CPU.player);
-		if (CPU.player == null || !CPU.player.equals(p.getUniqueId()) ) return;
+		if (plugin.cpu.player == null || !plugin.cpu.player.equals(p.getUniqueId()) ) return;
 		for (Player pl:Bukkit.getOnlinePlayers()) {
-			if (!CPU.player.equals(pl.getUniqueId())) {
+			if (!plugin.cpu.player.equals(pl.getUniqueId())) {
 				pl.sendMessage("You player that you were spectating has left their gameboy.");
 			}
 		}
-		if (!CPU.canRun()) {
+		if (!plugin.cpu.canRun()) {
 			return;
 		}
 		//Kill the connection and pause emulation. Your not going to restore a connected snapshot
-		CPU.severLink();
-		swinggui.pauseEmulation(false);
-		Bukkit.getScheduler().runTaskLater(jb, new Runnable(){
+		plugin.cpu.severLink();
+		GameboyPlugin.pauseEmulation(false);
+		Bukkit.getScheduler().runTaskLater(plugin, new Runnable(){
 			@Override
 			public void run() {
 				DataOutputStream dostream;
 				try {
-					dostream = FHandler.getDataOutputStream(jb.getDataFolder().getAbsolutePath()+"/../../../gameboy/saves/"+CPU.player.toString()+"_"+swinggui.curcartname+".st");
-					CPU.saveState(dostream);
+					dostream = FHandler.getDataOutputStream(plugin.getDataFolder().getAbsolutePath()+"/../../../gameboy/saves/"+plugin.cpu.player.toString()+"_"+GameboyPlugin.curcartname+".st");
+					plugin.cpu.saveState(dostream);
 					dostream.close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-				Bukkit.getScheduler().runTaskLater(jb, new Runnable(){
+				Bukkit.getScheduler().runTaskLater(plugin, new Runnable(){
 					@Override
 					public void run() {
 						Bukkit.getServer().shutdown();
@@ -263,7 +261,7 @@ public class JavaBoyEventHandler implements Listener{
 			}},20l);
 	}
 	public void updateLinkMenu() {
-		for (Entry<Integer, RemoteServerLink> e: this.jb.socketio.servers.entrySet()) {
+		for (Entry<Integer, RemoteServerLink> e: this.plugin.socketio.servers.entrySet()) {
 			int serverId = e.getKey();
 			String oplayer = e.getValue().player;
 			String cart = e.getValue().cart;
@@ -283,7 +281,7 @@ public class JavaBoyEventHandler implements Listener{
 		}
 	}
 	private void createLinkMenu(final Player player) {
-		if (CPU.isConnected()) return;
+		if (plugin.cpu.isConnected()) return;
 		updateLinkMenu();
 		menu.show(player);
 	}

@@ -14,11 +14,19 @@ import java.util.zip.GZIPOutputStream;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
+import com.sanjay900.jgbe.bukkit.GameboyPlayer;
+import com.sanjay900.jgbe.bukkit.GameboyPlugin;
+import com.sanjay900.jgbe.emu.tables.ShTablesRL;
+import com.sanjay900.jgbe.emu.tables.ShTablesRLC;
+import com.sanjay900.jgbe.emu.tables.ShTablesRR;
+import com.sanjay900.jgbe.emu.tables.ShTablesRRC;
+import com.sanjay900.jgbe.emu.tables.ShTablesSLA;
+import com.sanjay900.jgbe.emu.tables.ShTablesSRA;
+import com.sanjay900.jgbe.emu.tables.ShTablesSRL;
+
 
 public final class CPU {
-	public static CPU singleton = null;
-
-
+	private GameboyPlugin plugin = GameboyPlugin.getInstance();
 	public static final int ZF_Shift = 7;
 	public static final int NF_Shift = ZF_Shift - 1;
 	public static final int HC_Shift = NF_Shift - 1;
@@ -28,56 +36,58 @@ public final class CPU {
 	public static final int HC_Mask = 1 << HC_Shift;
 	public static final int CF_Mask = 1 << CF_Shift;
 
-	public static final long MAX_CYCLE_COUNT = 0x7FFFFFFFFFFFFFFFL;
+	public final long MAX_CYCLE_COUNT = 0x7FFFFFFFFFFFFFFFL;
 
-	public static long TotalInstrCount = 0;
-	public static long TotalCycleCount = 0;
+	public long TotalInstrCount = 0;
+	public long TotalCycleCount = 0;
 
-	public static long NextEventCycleCount = 0;
-	public static long VCRenderEventCycleCount = 0;
-	public static long lastVCRenderCycleCount = 0;
-	public static long KeyBounceEventCycleCount = 0;
-	public static long TIMAEventCycleCount = 0;
-	public static int cyclesPerTIMA = 0;
-	public static int keyBounce = 0;
+	public long NextEventCycleCount = 0;
+	public long VCRenderEventCycleCount = 0;
+	public long lastVCRenderCycleCount = 0;
+	public long KeyBounceEventCycleCount = 0;
+	public long TIMAEventCycleCount = 0;
+	public int cyclesPerTIMA = 0;
+	public int keyBounce = 0;
 
-	public static boolean KeyBounceEventPending = false;
-	public static boolean TIMAEventPending = false;
+	public boolean KeyBounceEventPending = false;
+	public boolean TIMAEventPending = false;
 
-	public static int A = 0;
-	public static int B = 1;
-	public static int C = 2;
-	public static int D = 3;
-	public static int E = 4;
-	public static int F = 5;
-	public static int H = 6;
-	public static int L = 7;
+	public int A = 0;
+	public int B = 1;
+	public int C = 2;
+	public int D = 3;
+	public int E = 4;
+	public int F = 5;
+	public int H = 6;
+	public int L = 7;
 
-	public static int[] IOP = new int[0x80];
-	public static int[] HRAM = new int[0x7f];
-	public static int[][] WRAM = new int[0x08][0x1000];
-	public static int[] FWRAM = WRAM[0];
-	public static int CurrentWRAMBank=1;
+	public int[] IOP = new int[0x80];
+	public int[] HRAM = new int[0x7f];
+	public int[][] WRAM = new int[0x08][0x1000];
+	public int[] FWRAM = WRAM[0];
+	public int[][] rMemMap = new int[0x10][];
+	public int[][] wMemMap = new int[0x10][];
+	public int CurrentWRAMBank=1;
 
-	public static boolean doublespeed = false;
-	public static boolean speedswitch = false;
+	public boolean doublespeed = false;
+	public boolean speedswitch = false;
 
 
-	public static final int CYCLES_PER_DIV = 256;
-	public static long divReset = 0;
+	public final int CYCLES_PER_DIV = 256;
+	public long divReset = 0;
 
-	public static int globalPC = 0;
-	public static int localPC = 0;
+	public int globalPC = 0;
+	public int localPC = 0;
 
-	public static int[] smallcruise = new int[2];
-	public static int[] decoderMemory = null;
-	public static int decoderMaxCruise = 0;
+	public int[] smallcruise = new int[2];
+	public int[] decoderMemory = null;
+	public int decoderMaxCruise = 0;
 
-	public static int getPC() {
+	public int getPC() {
 		return globalPC + localPC;
 	}
 
-	public static void setPC(int newPC) {
+	public void setPC(int newPC) {
 		newPC &= 0xffff;
 		if (rMemMap[newPC >> 12] != null && (newPC&0x0fff)<=(0x0fff-2)) {
 
@@ -108,7 +118,7 @@ public final class CPU {
 		}
 	}
 
-	public static void pushPC() {
+	public void pushPC() {
 		int pc = globalPC + localPC;
 		if (SP >= 0xC002 && SP <= 0xD000) {
 			FWRAM[--SP - 0xC000] = (pc>>8);
@@ -116,14 +126,14 @@ public final class CPU {
 		} else slowPushPC();
 	}
 
-	public static void slowPushPC() {
+	public void slowPushPC() {
 
 		int pc = globalPC + localPC;
 		--SP; SP &= 0xffff; write(SP, pc >> 8);
 		--SP; SP &= 0xffff; write(SP, pc&0xff);
 	}
 
-	public static void popPC() {
+	public void popPC() {
 		if (SP >= 0xC000 && SP <= 0xCFFE ) {
 			setPC(
 					(FWRAM[SP++ - 0xC000])
@@ -132,7 +142,7 @@ public final class CPU {
 		} else slowPopPC();
 	}
 
-	public static void slowPopPC() {
+	public void slowPopPC() {
 
 		int pc = read(SP++); SP &= 0xffff;
 		pc |= (read(SP++) << 8); SP &= 0xffff;
@@ -140,57 +150,41 @@ public final class CPU {
 	}
 
 
-	public static int SP=0;
-	public static int IE=0;
-	public static boolean IME=true;
-	public static boolean halted=false;
-	public static boolean delayed_halt=false;
-	public static boolean halt_fail_inc_pc=false;
+	public int SP=0;
+	public int IE=0;
+	public boolean IME=true;
+	public boolean halted=false;
+	public boolean delayed_halt=false;
+	public boolean halt_fail_inc_pc=false;
 
 
-	public static int KeyStatus=0;
-	public static int GUIKeyStatus=0;
-	public static int RemoteKeyStatus=0;
-	public static boolean useRemoteKeys = false;
+	public int KeyStatus=0;
+	public int GUIKeyStatus=0;
+	public int RemoteKeyStatus=0;
+	public boolean useRemoteKeys = false;
+	public int lastKeyChange;
+	public int playbackHistdoryIndex = -1;
 
-	public static boolean keyHistoryEnabled;
-	public static IntVector keyHistory;
-	public static int lastKeyChange;
-	public static int playbackHistoryIndex = -1;
-
-	static boolean BIOS_enabled = false;
+	boolean BIOS_enabled = false;
 
 
-	public static Cartridge cartridge;
+	public Cartridge cartridge;
 
-	public static VideoController VC;
-	public static AudioController AC;
-	static int hblank_dma_state;
+	public VideoController VC;
+	public AudioController AC;
+	int hblank_dma_state;
 
-	public static int last_memory_access=-1;
-	public static int last_memory_access_internal=-1;
+	public int last_memory_access=-1;
+	public int last_memory_access_internal=-1;
 
-	public CPU() {
+	public void init() {
+		VC = new VideoController(160, 144);
 		;
-		if (singleton != null) {
-			System.out.println("WARNING: trying to instantiate second instance of CPU singleton class");
-
-
-		}
-		singleton = this;
-
-		;
-		VC = new VideoController(this, 160, 144);
-		;
-		AC = new AudioController(this);
-		;
-		keyHistory = new IntVector();
-		;
-		;
+		AC = new AudioController();
 
 	}
 
-	public static void loadCartridge(Cartridge acartridge) {
+	public void loadCartridge(Cartridge acartridge) {
 		cartridge = acartridge;
 
 		reset(false);
@@ -199,14 +193,14 @@ public final class CPU {
 
 	}
 
-	public static boolean canRun() {
+	public boolean canRun() {
 		return (cartridge != null);
 	}
 
-	public static String first_save_string = new String();
-	public static String last_save_string = new String();
+	public String first_save_string = new String();
+	public String last_save_string = new String();
 
-	public static void calcCyclesPerTIMA() {
+	public void calcCyclesPerTIMA() {
 
 
 		if ((IOP[0x07]&4) != 0) {
@@ -216,7 +210,7 @@ public final class CPU {
 		}
 	}
 
-	public static void calcTIMAEventCycleCount() {
+	public void calcTIMAEventCycleCount() {
 		if ((IOP[0x07]&4) != 0) {
 			TIMAEventCycleCount = TotalCycleCount + cyclesPerTIMA * (0x100 - IOP[0x05]);
 			addEventCycleCount(TIMAEventCycleCount);
@@ -227,10 +221,10 @@ public final class CPU {
 		}
 	}
 
-	static protected void stateSaveLoad(boolean save, int version, DataOutputStream dostream, DataInputStream distream) throws IOException {
+	protected void stateSaveLoad(boolean save, int version, DataOutputStream dostream, DataInputStream distream) throws IOException {
 		if ( ((0 == -1) || (0 <= version)) && ((9 == -1) || (version <= 9)) ) first_save_string = "unknown";
 		if ( ((0 == -1) || (0 <= version)) && ((9 == -1) || (version <= 9)) ) last_save_string = "unknown";
-		if ((save)) last_save_string = Version.str;
+		if ((save)) last_save_string = plugin.getVersion();
 		if ( ((10 == -1) || (10 <= version)) && ((-1 == -1) || (version <= -1)) ) { if ((save)) dostream.writeUTF(first_save_string); else first_save_string = distream.readUTF(); };
 		if ( ((10 == -1) || (10 <= version)) && ((-1 == -1) || (version <= -1)) ) { if ((save)) dostream.writeUTF(last_save_string); else last_save_string = distream.readUTF(); };
 
@@ -320,26 +314,6 @@ public final class CPU {
 
 		if ( ((7 == -1) || (7 <= version)) && ((-1 == -1) || (version <= -1)) ) { if ((save)) dostream.writeByte((hblank_dma_state)&0xff); else hblank_dma_state = distream.readUnsignedByte(); };
 
-		if ( ((13 == -1) || (13 <= version)) && ((-1 == -1) || (version <= -1)) ) {
-			if ((save) && playbackHistoryIndex != -1) {
-				boolean t = true;
-				{ if ((save)) dostream.writeBoolean(t); else t = distream.readBoolean(); };
-				{ if ((save)) dostream.writeInt((int)lastKeyChange); else lastKeyChange = distream.readInt(); };
-				int olen = keyHistory.size();
-				keyHistory.setSize(playbackHistoryIndex);
-				(keyHistory).stateSaveLoad(save, version, dostream, distream);;
-				keyHistory.setSize(olen);
-			} else {
-				{ if ((save)) dostream.writeBoolean(keyHistoryEnabled); else keyHistoryEnabled = distream.readBoolean(); };
-				if (keyHistoryEnabled) {
-					{ if ((save)) dostream.writeInt((int)lastKeyChange); else lastKeyChange = distream.readInt(); };
-					(keyHistory).stateSaveLoad(save, version, dostream, distream);;
-				}
-			}
-			if ((!save)) playbackHistoryIndex = -1;
-		} else
-			keyHistoryEnabled = false;
-
 		if ((!save)) {
 			refreshMemMap();
 			calcCyclesPerTIMA();
@@ -373,11 +347,11 @@ public final class CPU {
 				TIMAEventPending = (TIMAEventCycleCount != MAX_CYCLE_COUNT);
 				KeyBounceEventPending = (KeyBounceEventCycleCount != MAX_CYCLE_COUNT);
 		}
-		
-		
+
+
 	}
 
-	public static void saveState(DataOutputStream dostream)
+	public void saveState(DataOutputStream dostream)
 			throws IOException
 	{
 		int saveversion = (23);
@@ -385,29 +359,11 @@ public final class CPU {
 		dostream.writeInt(saveversion);
 
 		OutputStream compress = null;
-		int compressionmethod = 0;
-
-		compressionmethod = 1;
-
-
+		int compressionmethod = 1;
 		dostream.writeInt(compressionmethod);
-		switch (compressionmethod) {
-
-		case 0: break;
-
-
-		case 1: {
 			compress = new GZIPOutputStream(dostream);
 			dostream = new DataOutputStream(compress);
-		}; break;
-
-		case 2: {
-			compress = new LZOutputStream(dostream);
-			dostream = new DataOutputStream(compress);
-		}; break;
-
-		default: if (!(false)) throw new Error("Assertion failed: " + "false");
-		}
+		
 		stateSaveLoad(true, saveversion, dostream, null);
 
 		dostream.flush();
@@ -415,7 +371,7 @@ public final class CPU {
 		if (compress != null) compress.close();
 	}
 
-	public static void loadState(DataInputStream distream)
+	public void loadState(DataInputStream distream)
 			throws IOException
 	{
 		int loadversion;
@@ -441,29 +397,20 @@ public final class CPU {
 		if (loadversion >= 5)
 			compressionmethod = distream.readInt();
 		switch (compressionmethod) {
-
-		case 0: break;
-
-
 		case 1: distream = new DataInputStream(new GZIPInputStream(distream)); break;
-
-		case 2: distream = new DataInputStream(new LZInputStream(distream)); break;
 
 		default: throw new IOException("unknown compression method:"+compressionmethod);
 		}
 		stateSaveLoad(false, loadversion, null, distream);
 	}
 
-	public static int[][] rMemMap = new int[0x10][];
-	public static int[][] wMemMap = new int[0x10][];
-
-	public static boolean isCGB() {
+	public boolean isCGB() {
 
 		if(cartridge==null) return false;
 		return (read(0x0143) == 0x80) || (read(0x0143) == 0xC0);
 	}
 
-	public static int hblank_dma() {
+	public int hblank_dma() {
 		if (!((VC.STAT&2)==0)) throw new Error("Assertion failed: " + "(VC.STAT&2)==0");
 		if (hblank_dma_state < (1<<7)) return 0;
 
@@ -484,7 +431,7 @@ public final class CPU {
 		return 8;
 	}
 
-	public static void refreshMemMap() {
+	public void refreshMemMap() {
 		if (BIOS_enabled)
 			rMemMap[0x0] = null;
 		else
@@ -529,7 +476,7 @@ public final class CPU {
 		setPC(getPC());
 	}
 
-	public static int read(int index) {
+	public int read(int index) {
 
 
 
@@ -539,7 +486,7 @@ public final class CPU {
 		return read_slow(index);
 	}
 
-	public static int read_slow(int index) {
+	public int read_slow(int index) {
 
 		int b;
 
@@ -673,38 +620,26 @@ public final class CPU {
 		}
 		return b;
 	}
-
-
-	public static void write_fast1(int value, int index) {
-		if (swinggui.getInstance().gp != null && swinggui.getInstance().gp.conv != null) 
-			swinggui.getInstance().gp.conv.writtenMemory(index);
+	public void write(int index, int value) {
 
 		int mm[]=wMemMap[index>>12];
 		if (mm!=null) {
+			if (GameboyPlugin.getInstance().gp != null && GameboyPlugin.getInstance().gp.conv != null) { 
+				GameboyPlugin.getInstance().gp.conv.writtenMemory(index);
+			}
 			mm[index&0x0FFF] = (value);
 			return;
 		}
 		write_slow(index, value);
 	}
 
-	public static void write(int index, int value) {
-		if (swinggui.getInstance().gp != null && swinggui.getInstance().gp.conv != null) 
-			swinggui.getInstance().gp.conv.writtenMemory(index);
-		int mm[]=wMemMap[index>>12];
-		if (mm!=null) {
-			mm[index&0x0FFF] = (value);
-			return;
-		}
-		write_slow(index, value);
-	}
-
-	public static void write_slow(int index, int value) {
-		if (swinggui.getInstance().gp != null && swinggui.getInstance().gp.conv != null) 
-			swinggui.getInstance().gp.conv.writtenMemory(index);
+	public void write_slow(int index, int value) {
 		if (!(wMemMap[index>>12] == null)) throw new Error("Assertion failed: " + "wMemMap[index>>12] == null");
 
 		if (!(index>=0 && index <=0xffff)) throw new Error("Assertion failed: " + "index>=0 && index <=0xffff");
 
+		if (GameboyPlugin.getInstance().gp != null && GameboyPlugin.getInstance().gp.conv != null) 
+			GameboyPlugin.getInstance().gp.conv.writtenMemory(index);
 		if(index < 0x8000) {
 			cartridge.write(index, value);
 
@@ -836,11 +771,11 @@ public final class CPU {
 	}
 
 
-	public static void reset() {
+	public void reset() {
 		reset(true);
 	}
 
-	public static void reset(boolean bios) {
+	public void reset(boolean bios) {
 		if(cartridge == null) return;
 		BIOS_enabled = bios;
 
@@ -892,11 +827,8 @@ public final class CPU {
 		KeyStatus=0;
 		keyBounce=0;
 		lastKeyChange = 0;
-		keyHistory.clear();
 		hblank_dma_state = 0;
-		playbackHistoryIndex = -1;
-		keyHistoryEnabled = false;
-		first_save_string = Version.str;
+		first_save_string = plugin.getVersion();
 		delayed_halt = false;
 		halt_fail_inc_pc = false;
 
@@ -916,11 +848,11 @@ public final class CPU {
 				WRAM[i][j] = 0;
 	}
 
-	public static long cycles() {
+	public long cycles() {
 		return TotalInstrCount;
 	}
 
-	public static void printCPUstatus() {
+	public void printCPUstatus() {
 		String flags = "";
 		flags += (( F & ZF_Mask ) == ZF_Mask )?"Z ":"z ";
 		flags += (( F & NF_Mask ) == NF_Mask )?"N ":"n ";
@@ -936,7 +868,7 @@ public final class CPU {
 
 	}
 
-	public static int checkInterrupts() {
+	public int checkInterrupts() {
 		if(IME) {
 			int ir = IOP[0x0f]&IE;
 			if((ir&(1<<0))!=0) {
@@ -969,7 +901,7 @@ public final class CPU {
 		return 0;
 	}
 
-	public static void interrupt(int i) {
+	public void interrupt(int i) {
 		IME = false;
 		pushPC();
 		setPC(i);
@@ -977,31 +909,31 @@ public final class CPU {
 		preCheckInts();
 	}
 
-	public static void triggerInterrupt(int i) {
+	public void triggerInterrupt(int i) {
 		IOP[0x0f] |= (1<<i);
 
 		if (halted && IME && ((1<<i) & IE) != 0) halted = false;
 		preCheckInts();
 	}
 
-	public static void pressButton(int i) {
+	public void pressButton(int i) {
 		GUIKeyStatus |= i;
 	}
 
-	public static void releaseButton(int i) {
+	public void releaseButton(int i) {
 		GUIKeyStatus &= ~i;
 	}
 
-	public static void pressRemoteButton(int i) {
+	public void pressRemoteButton(int i) {
 		RemoteKeyStatus |= i;
 	}
 
-	public static void releaseRemoteButton(int i) {
+	public void releaseRemoteButton(int i) {
 		RemoteKeyStatus &= ~i;
 	}
 
 
-	private static final int registerRead(int regNum) {
+	private final int registerRead(int regNum) {
 		switch (regNum) {
 		case 0:
 			return B;
@@ -1024,7 +956,7 @@ public final class CPU {
 		}
 	}
 
-	public static void executeALU(int b1) {
+	public void executeALU(int b1) {
 		int operand = registerRead(b1 & 0x07);
 		switch ((b1 & 0x38) >> 3) {
 		case 1:
@@ -1105,14 +1037,14 @@ public final class CPU {
 		}
 	}
 
-	public static void handleTIMAEvent()
+	public void handleTIMAEvent()
 	{
 		IOP[0x05] = IOP[0x06];
 		triggerInterrupt(2);
 		TIMAEventCycleCount += cyclesPerTIMA * (0x100 - IOP[0x05]);
 	};
 
-	public static void handleKeyBounceEvent()
+	public void handleKeyBounceEvent()
 	{
 		if (keyBounce > 0) {
 			triggerInterrupt(4);
@@ -1125,7 +1057,7 @@ public final class CPU {
 		}
 	};
 
-	public static void handleVCRenderEvent()
+	public void handleVCRenderEvent()
 	{
 		int cycles = (int)(TotalCycleCount - lastVCRenderCycleCount);
 
@@ -1141,13 +1073,13 @@ public final class CPU {
 
 	};
 
-	public static void addEventCycleCount(long count)
+	public void addEventCycleCount(long count)
 	{
 		if (count < NextEventCycleCount)
 			NextEventCycleCount = count;
 	};
 
-	public static void handleEvents() {
+	public void handleEvents() {
 		if (TotalCycleCount >= VCRenderEventCycleCount);
 		handleVCRenderEvent();
 		NextEventCycleCount = VCRenderEventCycleCount;
@@ -1166,12 +1098,12 @@ public final class CPU {
 	};
 
 
-	public static boolean fastCheckInts;
-	public static void preCheckInts() {
+	public boolean fastCheckInts;
+	public void preCheckInts() {
 		fastCheckInts = (IME && ((IOP[0x0f]&IE)!=0));
 	}
 
-	public static int execute() {
+	public int execute() {
 		int op;
 		int cycles;
 		int t_mm[]; int t_mi; int t_w16; int t_acc; int t_vol; int t_mask;;
@@ -1803,61 +1735,34 @@ public final class CPU {
 		return cycles;
 	}
 
-	static long lastns = 0;
-	static long lastuf = 0;
-	static int samplesLeft = 0;
+	long lastns = 0;
+	long lastuf = 0;
+	int samplesLeft = 0;
 
-	public static void elapseTime(int cycles) {
+	public void elapseTime(int cycles) {
 		TotalCycleCount += cycles;
 	}
 
-	public static boolean keeprunning;
+	public boolean keeprunning;
 
-	public static void runlooprun() {
+	public void runlooprun() {
 		int cycles;
 		do {
 			if (TotalCycleCount >= NextEventCycleCount)
 				handleEvents();
 
-			if (playbackHistoryIndex == -1) {
-				if (KeyStatus != GUIKeyStatus) {
-					keyBounce = 1000;
-					handleKeyBounceEvent();
-				}
-				if (KeyStatus != GUIKeyStatus || lastKeyChange > 0x3fffffff) {
-					KeyStatus = GUIKeyStatus;
-					keyHistory.add(lastKeyChange);
-					keyHistory.add(KeyStatus);
-					lastKeyChange = 0;
-				}
-			} else if (playbackHistoryIndex < keyHistory.size()) {
-				int d = keyHistory.get(playbackHistoryIndex);
-				if (d <= lastKeyChange) {
-
-					lastKeyChange = 0;
-					++playbackHistoryIndex;
-					d = keyHistory.get(playbackHistoryIndex++);
-					if (KeyStatus != d) {
-						KeyStatus = d;
-						keyBounce = 1000;
-						handleKeyBounceEvent();
-					}
-				}
-			} else {
-				playbackHistoryIndex = -1;
-				keyHistoryEnabled = true;
-			}
-
 			cycles = 4*execute();
 
 			lastKeyChange += cycles;
 
-
-
-
-
-
-
+			if (KeyStatus != GUIKeyStatus) {
+				keyBounce = 1000;
+				handleKeyBounceEvent();
+			}
+			if (KeyStatus != GUIKeyStatus || lastKeyChange > 0x3fffffff) {
+				KeyStatus = GUIKeyStatus;
+				lastKeyChange = 0;
+			}
 			TotalCycleCount += cycles;
 
 			if (cycles > 0) {
@@ -1949,34 +1854,34 @@ public final class CPU {
 		if (cycles == 0) { throw new RuntimeException(); };
 	};
 
-	public static void runloop() {
+	public void runloop() {
 		keeprunning = true;
 		runlooprun();
 	};
 
-	public static void runlooponce() {
+	public void runlooponce() {
 		keeprunning = false;
 		runlooprun();
 	};
 
 
-	static private int PORTNO = 1989;
-	static public UUID player;
-	static public int serverN =-1;
-	static public int clientN =-1;
-	static private int LINKmulti = 1;
-	static private int LINKdelay = 0;
+	private int PORTNO = 1989;
+	public UUID player;
+	public int serverN =-1;
+	public int clientN =-1;
+	private int LINKmulti = 1;
+	private int LINKdelay = 0;
 
-	static private int LINKcntdwn = 0;
-	static private int[] LINKbuf = new int[8];
-	static private int LINKind = 0;
-	static private int LINKtimeout = 0;
+	private int LINKcntdwn = 0;
+	private int[] LINKbuf = new int[8];
+	private int LINKind = 0;
+	private int LINKtimeout = 0;
 
-	static protected int LinkCableStatus = 0;
+	protected int LinkCableStatus = 0;
 
 
 
-	static void setDelay(int ndelay) throws IOException {
+	void setDelay(int ndelay) throws IOException {
 		for (int i = 0; i < LINKdelay; ++i)
 			LinkCableIn.readInt();
 		LINKdelay = ndelay;
@@ -1985,18 +1890,18 @@ public final class CPU {
 		LINKmulti = LINKdelay + 1;
 	}
 
-	static protected ServerSocket LinkCablesrvr = null;
+	protected ServerSocket LinkCablesrvr = null;
 
-	static protected Socket LinkCablesktOut = null;
-	static protected Socket LinkCablesktIn = null;
+	protected Socket LinkCablesktOut = null;
+	protected Socket LinkCablesktIn = null;
 
-	static protected DataInputStream LinkCableIn = null;
-	static protected DataOutputStream LinkCableOut = null;
+	protected DataInputStream LinkCableIn = null;
+	protected DataOutputStream LinkCableOut = null;
 
-	static protected boolean LinkCableSendReceive=false;
+	protected boolean LinkCableSendReceive=false;
 
 
-	public static final void severLink() {
+	public final void severLink() {
 		try {
 			if(LinkCablesrvr!=null) {
 				LinkCablesrvr.close();
@@ -2027,12 +1932,12 @@ public final class CPU {
 			LinkCableStatus=0;
 		}
 	}
-	public static boolean isConnected() {
+	public boolean isConnected() {
 		return LinkCableStatus!=0;
 	}
-	public static final void serveLink(Player p) {
+	public final void serveLink(Player p) {
 		if(LinkCableStatus==0) {
-			Bukkit.getScheduler().runTaskAsynchronously(swinggui.getInstance(), () -> {
+			Bukkit.getScheduler().runTaskAsynchronously(GameboyPlugin.getInstance(), () -> {
 				try {
 					player = p.getUniqueId();
 					PORTNO = 30000+Bukkit.getServer().getPort()-25580;
@@ -2054,9 +1959,9 @@ public final class CPU {
 		else p.sendMessage("Unable to connect to host server while connected to another!");
 	}
 
-	public static final void clientLink(int server, Player p) {
+	public final void clientLink(int server, Player p) {
 		if(LinkCableStatus==0) {
-			Bukkit.getScheduler().runTaskAsynchronously(swinggui.getInstance(), () -> {
+			Bukkit.getScheduler().runTaskAsynchronously(GameboyPlugin.getInstance(), () -> {
 				try {
 					PORTNO = 30000+server;
 					serverN  = server;
@@ -2077,7 +1982,7 @@ public final class CPU {
 			p.sendMessage("Unable to connect to another server!");
 	}
 
-	public static boolean isServer() {
+	public boolean isServer() {
 		return LinkCableStatus==1;
 	}
 

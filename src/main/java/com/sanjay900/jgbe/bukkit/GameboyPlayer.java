@@ -2,7 +2,6 @@ package com.sanjay900.jgbe.bukkit;
 
 import java.io.DataInputStream;
 import java.io.File;
-import java.lang.reflect.InvocationTargetException;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
@@ -16,21 +15,18 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.util.Vector;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.wrappers.BlockPosition;
+import com.sanjay900.jgbe.converters.BombermanConverter;
 import com.sanjay900.jgbe.converters.Converter;
-import com.sanjay900.jgbe.converters.GoldConverter;
-import com.sanjay900.jgbe.converters.PokemonConverter;
-import com.sanjay900.jgbe.emu.CPU;
+import com.sanjay900.jgbe.converters.CrystalConverter;
+import com.sanjay900.jgbe.converters.MarioLand1Converter;
+import com.sanjay900.jgbe.converters.RedBlueConverter;
+import com.sanjay900.jgbe.converters.YellowConverter;
 import com.sanjay900.jgbe.emu.FHandler;
-import com.sanjay900.jgbe.emu.swinggui;
 import com.sanjay900.nmsUtil.movementController.ControllerFactory;
 import com.sanjay900.nmsUtil.util.Button;
 
 public class GameboyPlayer {
-	swinggui jb = swinggui.getInstance();
+	GameboyPlugin plugin = GameboyPlugin.getInstance();
 	UUID sender;
 	public Converter conv;
 	public Scoreboard board;
@@ -45,11 +41,11 @@ public class GameboyPlayer {
 		p.teleport(l);
 		p.setAllowFlight(false);
 		p.setFlying(false);
-		Bukkit.getScheduler().runTaskLater(jb, new Runnable(){
+		Bukkit.getScheduler().runTaskLater(plugin, new Runnable(){
 
 			@Override
 			public void run() {
-				if (CPU.canRun()) return;
+				if (plugin.cpu.canRun()) return;
 				sender = p.getUniqueId();
 				ItemStack item = new ItemStack(Material.WATCH,
 						1);
@@ -77,39 +73,44 @@ public class GameboyPlayer {
 				p.getInventory().setHeldItemSlot(0);
 				p.sendMessage(ChatColor.YELLOW+"Controlls: Jump for A, Sneak for B, Hold the clock and Mine for start, Interact for select, and move for directionals.");
 				new ControllerFactory().withLocation(l).withPlayer(p).build();	
-				Bukkit.getScheduler().runTaskLaterAsynchronously(jb, new Runnable(){
+				Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable(){
 
 					@Override
 					public void run() {
 						try {
-							String filename = jb.getDataFolder().getAbsolutePath()+"/../../../gameboy/roms/"+rom;
-							jb.tryToLoadROM(filename);
-							jb.pauseEmulation(false);
-							File f = new File(jb.getDataFolder().getAbsolutePath()+"/../../../gameboy/saves/"+p.getUniqueId().toString()+"_"+swinggui.curcartname+".st");
+							String filename = plugin.getDataFolder().getAbsolutePath()+"/../../../gameboy/roms/"+rom;
+							plugin.tryToLoadROM(filename);
+							File f = new File(plugin.getDataFolder().getAbsolutePath()+"/../../../gameboy/saves/"+p.getUniqueId().toString()+"_"+GameboyPlugin.curcartname+".st");
 							if (f.exists()) {
-								DataInputStream distream = FHandler.getDataInputStream(jb.getDataFolder().getAbsolutePath()+"/../../../gameboy/saves/"+p.getUniqueId().toString()+"_"+swinggui.curcartname+".st");
-								CPU.loadState(distream);
+								DataInputStream distream = FHandler.getDataInputStream(plugin.getDataFolder().getAbsolutePath()+"/../../../gameboy/saves/"+p.getUniqueId().toString()+"_"+GameboyPlugin.curcartname+".st");
+								plugin.cpu.loadState(distream);
 								distream.close();
 							}
-							if (CPU.isConnected())
-								CPU.severLink();
+							if (plugin.cpu.isConnected())
+								plugin.cpu.severLink();
 
-							CPU.serveLink(p);
-							Bukkit.getScheduler().runTaskLater(swinggui.getInstance(),() -> {
+							plugin.cpu.serveLink(p);
+							Bukkit.getScheduler().runTaskLater(GameboyPlugin.getInstance(),() -> {
 								board = Bukkit.getScoreboardManager().getNewScoreboard();
 
 								p.setScoreboard(board);
-								if (rom.contains("red")||rom.contains("blue")||rom.contains("yellow")) 
-									conv = new PokemonConverter(GameboyPlayer.this);
-								if (rom.contains("gold")||rom.contains("silver")) 
-									conv = new GoldConverter(GameboyPlayer.this);
-
+								if (rom.contains("red")||rom.contains("blue")) 
+									conv = new RedBlueConverter(GameboyPlayer.this);
+								if(rom.contains("yellow")) 
+									conv = new YellowConverter(GameboyPlayer.this);
+								if (rom.contains("crystal")) 
+									conv = new CrystalConverter(GameboyPlayer.this);
+								if(rom.contains("land.gb"))
+									conv = new MarioLand1Converter(GameboyPlayer.this);
+								if(rom.contains("bomb"))
+									conv = new BombermanConverter(GameboyPlayer.this);
 							},5l);
+
+							plugin.resumeEmulation(true);
 
 						} catch (Exception ex) {
 							ex.printStackTrace();
 						}
-						jb.resumeEmulation(false);
 					}},7l);
 			}}, 20l);
 
@@ -117,13 +118,13 @@ public class GameboyPlayer {
 	}
 	public void press(boolean b, int i) {
 		if (b) {
-			CPU.pressButton(keyMasks[i]);
+			plugin.cpu.pressButton(keyMasks[i]);
 		} else {
-			CPU.releaseButton(keyMasks[i]);
+			plugin.cpu.releaseButton(keyMasks[i]);
 		}
 	}
 	public void keyToggled(Button key, boolean pressed) {
-		if (CPU.cartridge == null) return;
+		if (plugin.cpu.cartridge == null) return;
 		switch (key) {
 		case UP:
 			press(pressed,0);

@@ -14,14 +14,13 @@ import org.bukkit.entity.Player;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.sanjay900.jgbe.converters.PokemonConverter;
-import com.sanjay900.jgbe.converters.PokemonConverter.dataType;
+import com.sanjay900.jgbe.converters.RedBlueConverter;
+import com.sanjay900.jgbe.converters.RedBlueConverter.dataType;
 import com.sanjay900.jgbe.emu.CPU;
 import com.sanjay900.jgbe.emu.FHandler;
-import com.sanjay900.jgbe.emu.swinggui;
 
 public class CommandHandler implements CommandExecutor{
-	swinggui jb = swinggui.getInstance();
+	GameboyPlugin plugin = GameboyPlugin.getInstance();
 	public CommandHandler() {
 	}
 	@Override
@@ -33,8 +32,8 @@ public class CommandHandler implements CommandExecutor{
 
 			switch (args[0]) {
 			case "getPokemon":
-				if (sender.isOp() && jb.gp != null && jb.gp.conv instanceof PokemonConverter) {
-					PokemonConverter pc = (PokemonConverter) jb.gp.conv;
+				if (sender.isOp() && plugin.gp != null && plugin.gp.conv instanceof RedBlueConverter) {
+					RedBlueConverter pc = (RedBlueConverter) plugin.gp.conv;
 					sender.sendMessage("Pokemon Captured: "+pc.getCapacity());
 					for (int i =0; i< pc.getCapacity(); i++) {
 						sender.sendMessage("Pokemon "+(i+1)+":");
@@ -48,74 +47,74 @@ public class CommandHandler implements CommandExecutor{
 				break;
 			case "loadrom":
 				if (!sender.isOp()) return false;
-				if (jb.gp != null) {
-					CPU.severLink();
+				if (plugin.gp != null) {
+					plugin.cpu.severLink();
 				}
-				jb.gp = new GameboyPlayer((Player)sender,args[1]);
+				plugin.gp = new GameboyPlayer((Player)sender,args[1]);
 				break;
 
 
 
 			case "save":
-				if (!CPU.canRun()) {
+				if (!plugin.cpu.canRun()) {
 					sender.sendMessage("You need to start a game before you can save one!"); 
 					return true;
 				
 				}
-				swinggui.pauseEmulation(false);
-				DataOutputStream dostream = FHandler.getDataOutputStream(jb.getDataFolder().getAbsolutePath()+"/../../../gameboy/saves/"+((Player)sender).getUniqueId().toString()+"_"+swinggui.curcartname+".st");
-				CPU.saveState(dostream);
+				GameboyPlugin.pauseEmulation(false);
+				DataOutputStream dostream = FHandler.getDataOutputStream(plugin.getDataFolder().getAbsolutePath()+"/../../../gameboy/saves/"+((Player)sender).getUniqueId().toString()+"_"+GameboyPlugin.curcartname+".st");
+				plugin.cpu.saveState(dostream);
 				dostream.close();
 				sender.sendMessage("Saved State!");
-				swinggui.resumeEmulation(false);
+				GameboyPlugin.resumeEmulation(false);
 				return true;
 
 			case "load":
-				if (!CPU.canRun()) {
+				if (!plugin.cpu.canRun()) {
 					sender.sendMessage("You need to start a game before you can load one!"); 
 					return true;
 				
 				}
-				swinggui.pauseEmulation(false);
-				File f = new File(jb.getDataFolder().getAbsolutePath()+"/../../../gameboy/saves/"+((Player)sender).getUniqueId().toString()+"_"+swinggui.curcartname+".st");
+				GameboyPlugin.pauseEmulation(false);
+				File f = new File(plugin.getDataFolder().getAbsolutePath()+"/../../../gameboy/saves/"+((Player)sender).getUniqueId().toString()+"_"+GameboyPlugin.curcartname+".st");
 				if (!f.exists()) {
 					sender.sendMessage("You dont have a save to load!"); 
 					return true;
 				}
-				DataInputStream distream = FHandler.getDataInputStream(jb.getDataFolder().getAbsolutePath()+"/../../../gameboy/roms/"+((Player)sender).getUniqueId().toString()+"_"+swinggui.curcartname+".st");
-				CPU.loadState(distream);
+				DataInputStream distream = FHandler.getDataInputStream(plugin.getDataFolder().getAbsolutePath()+"/../../../gameboy/roms/"+((Player)sender).getUniqueId().toString()+"_"+GameboyPlugin.curcartname+".st");
+				plugin.cpu.loadState(distream);
 				distream.close();
-				swinggui.resumeEmulation(false);
+				GameboyPlugin.resumeEmulation(false);
 				sender.sendMessage("Loaded State!");
 				return true;
 			case "pause":
-				if (!CPU.canRun()) {
+				if (!plugin.cpu.canRun()) {
 					sender.sendMessage("You need to start a game before you can pause one!"); 
 					return true;
 				
 				}
 				sender.sendMessage("Paused Game!");
-				swinggui.pauseEmulation(false);
+				GameboyPlugin.pauseEmulation(false);
 				return true;
 			case "resume":
-				if (!CPU.canRun()) {
+				if (!plugin.cpu.canRun()) {
 					sender.sendMessage("You need to start a game before you can resume one!"); 
 					return true;
 				
 				}
 				sender.sendMessage("Resumed Game!");
-				swinggui.resumeEmulation(false);
+				GameboyPlugin.resumeEmulation(false);
 				return true;
 			case "reset":
-				swinggui.pauseEmulation(false);
-				CPU.reset(false);
+				GameboyPlugin.pauseEmulation(false);
+				plugin.cpu.reset(false);
 
-				swinggui.resumeEmulation(false);
+				GameboyPlugin.resumeEmulation(false);
 				sender.sendMessage("Reset Game!");
 				return true;
 			}
 			if (args[0].equalsIgnoreCase("accept")) {
-				if (jb.socketio.acceptServer == -1) {
+				if (plugin.socketio.acceptServer == -1) {
 					sender.sendMessage(ChatColor.AQUA+"You don't have any Link requests right now.");
 					return true;
 				}
@@ -127,15 +126,15 @@ public class CommandHandler implements CommandExecutor{
 				innerObject.put("accepted", true);
 				innerObject.put("serverid", Bukkit.getServer().getPort()-25580);
 				obj.put("eventName", "linkstatus");
-				obj.put("server","gba"+jb.socketio.acceptServer);
+				obj.put("server","gba"+plugin.socketio.acceptServer);
 				obj.put("object", innerObject);
 
-				jb.socketio.client.emit("send", obj);
+				plugin.socketio.client.emit("send", obj);
 
-				jb.socketio.acceptServer = -1;
+				plugin.socketio.acceptServer = -1;
 				return true;
 			} else if (args[0].equalsIgnoreCase("deny")) {
-				if (jb.socketio.acceptServer == -1) {
+				if (plugin.socketio.acceptServer == -1) {
 					sender.sendMessage(ChatColor.AQUA+"You don't have any Link requests right now.");
 					return true;
 				}
@@ -146,11 +145,11 @@ public class CommandHandler implements CommandExecutor{
 				innerObject.put("accepted", false);
 				innerObject.put("serverid", Bukkit.getServer().getPort()-25580);
 				obj.put("eventName", "linkstatus");
-				obj.put("server","gba"+jb.socketio.acceptServer);
+				obj.put("server","gba"+plugin.socketio.acceptServer);
 				obj.put("object", innerObject);
-				jb.socketio.client.emit("send", obj);
+				plugin.socketio.client.emit("send", obj);
 
-				jb.socketio.acceptServer = -1;
+				plugin.socketio.acceptServer = -1;
 				return true;
 			}
 			return false;

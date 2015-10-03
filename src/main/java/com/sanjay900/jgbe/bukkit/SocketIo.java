@@ -15,9 +15,8 @@ import com.github.nkzawa.socketio.client.Socket;
 import com.sanjay900.eyrePlugin.EyrePlugin;
 import com.sanjay900.eyrePlugin.sockets.SocketIOHandler;
 import com.sanjay900.eyrePlugin.utils.Cooldown;
-import com.sanjay900.jgbe.converters.PokemonConverter;
+import com.sanjay900.jgbe.converters.RedBlueConverter;
 import com.sanjay900.jgbe.emu.CPU;
-import com.sanjay900.jgbe.emu.swinggui;
 
 public class SocketIo {
 
@@ -25,7 +24,7 @@ public class SocketIo {
 	public UUID acceptPlayer = null;
 	public HashMap<Integer,RemoteServerLink> servers = new HashMap<Integer, RemoteServerLink>();
 	public Socket client;
-	public swinggui plugin = swinggui.getInstance();
+	public GameboyPlugin plugin = GameboyPlugin.getInstance();
 	public GameboyPlayer gp;
 	private boolean broadcasting = false;
 	@Getter
@@ -56,25 +55,25 @@ public class SocketIo {
 				} catch (JSONException ex) {
 					ex.printStackTrace();
 				}
-				if (plugin.jb != null)
-					plugin.jb.updateLinkMenu();
+				if (plugin.plugin != null)
+					plugin.plugin.updateLinkMenu();
 			}
 		});
 		client.on("gba"+serverId, new Emitter.Listener() {
 			@Override
 			public void call(Object... args) {
-				plugin.jb.cart = (String) args[0];
+				plugin.plugin.cart = (String) args[0];
 			}
 		});
 		client.on("linkrequest", new Emitter.Listener() {
 			@Override
 			public void call(Object... args) {
-				if (CPU.player != null && Cooldown.tryCooldown(Bukkit.getPlayer(CPU.player), "tellraw", 100)) {
+				if (plugin.cpu.player != null && Cooldown.tryCooldown(Bukkit.getPlayer(plugin.cpu.player), "tellraw", 100)) {
 					JSONObject obj = (JSONObject)args[0];
 					try {
 						acceptServer = obj.getInt("serverid");
 						String command = "tellraw {eplayername}  {\"text\":\"\",\"extra\":[{\"text\":\"Click to \",\"color\":\"aqua\"},{\"text\":\"Accept \",\"color\":\"green\",\"bold\":\"true\",\"clickEvent\":{\"action\":\"run_command\",\"value\":\"/gameboy accept\"}},{\"text\":\"(/gb accept) \",\"color\":\"green\",\"clickEvent\":{\"action\":\"suggest_command\",\"value\":\"/gb accept\"}},{\"text\":\"or \",\"color\":\"aqua\",\"clickEvent\":{\"action\":\"run_command\",\"value\":\"/gameboy deny\"}},{\"text\":\"Deny \",\"color\":\"red\",\"bold\":\"true\",\"clickEvent\":{\"action\":\"run_command\",\"value\":\"/gameboy deny\"}},{\"text\":\"(/gb deny) \",\"color\":\"red\",\"clickEvent\":{\"action\":\"suggest_command\",\"value\":\"/gb deny\"}},{\"text\":\"a request to link with your gameboy from {playername} on {servername}\",\"color\":\"aqua\",\"clickEvent\":{\"action\":\"run_command\",\"value\":\"/gameboy deny\"}}]}";
-						command = command.replace("{eplayername}", (Bukkit.getPlayer(CPU.player)).getName());
+						command = command.replace("{eplayername}", (Bukkit.getPlayer(plugin.cpu.player)).getName());
 						command = command.replace("{playername}", obj.getString("userName"));
 						command = command.replace("{servername}", "Server "+obj.getInt("serverid"));
 
@@ -93,10 +92,10 @@ public class SocketIo {
 				try {
 					if (obj.getBoolean("accepted")) {
 						Bukkit.getPlayer(acceptPlayer).sendMessage("Your request was accepted by the other player!");
-						if (CPU.isConnected())
-							CPU.severLink();
+						if (plugin.cpu.isConnected())
+							plugin.cpu.severLink();
 
-						CPU.clientLink(obj.getInt("serverid"), Bukkit.getPlayer(acceptPlayer));
+						plugin.cpu.clientLink(obj.getInt("serverid"), Bukkit.getPlayer(acceptPlayer));
 					} else {
 						Bukkit.getPlayer(acceptPlayer).sendMessage("Your request was denied by the other player.");
 					}
@@ -124,15 +123,15 @@ public class SocketIo {
 				int serverId = Bukkit.getServer().getPort()-25580;
 				int rmServerId = -1;
 				boolean isConnected = false;
-					player = CPU.player==null?"null":(Bukkit.getPlayer(CPU.player)).getName();
-					isConnected = CPU.isConnected();
-					if (CPU.isServer()) {
-						rmServerId = CPU.clientN-35580;
+					player = plugin.cpu.player==null?"null":(Bukkit.getPlayer(plugin.cpu.player)).getName();
+					isConnected = plugin.cpu.isConnected();
+					if (plugin.cpu.isServer()) {
+						rmServerId = plugin.cpu.clientN-35580;
 					} else if (isConnected) {
-						rmServerId = CPU.serverN-35580;
+						rmServerId = plugin.cpu.serverN-35580;
 					}
 				
-				if (CPU.cartridge == null) {
+				if (plugin.cpu.cartridge == null) {
 					game = "null";
 				} else {
 					game = plugin.cpu.cartridge.getTitle();
@@ -155,8 +154,8 @@ public class SocketIo {
 				} catch (JSONException e) {
 					e.printStackTrace();
 				}
-				if (plugin.gp != null && plugin.gp.conv != null && plugin.gp.conv instanceof PokemonConverter){
-					PokemonConverter conv = (PokemonConverter) plugin.gp.conv;
+				if (plugin.gp != null && plugin.gp.conv != null && plugin.gp.conv instanceof RedBlueConverter){
+					RedBlueConverter conv = (RedBlueConverter) plugin.gp.conv;
 					//TODO: SOCKETIO ALL THE POKEMON THINGS!
 				}
 

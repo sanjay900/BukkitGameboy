@@ -24,7 +24,7 @@
 		<repository>
 			<id>deployment</id>
 			<name>Eyre Repo</name>
-			<url>http://maven.tangentnetwork.tk/content/repositories/eyre/</url>
+			<url>http://maven.tangentmc.net/content/repositories/eyre/</url>
 		</repository>
 	</repositories>
 	<dependencies>
@@ -33,13 +33,13 @@
 		<dependency>
 			<groupId>com.sanjay900</groupId>
 			<artifactId>nmsUtil-API</artifactId>
-			<version>1.0-SNAPSHOT</version>
+			<version>1.3-SNAPSHOT</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
-			<groupId>eyreNetwork</groupId>
+			<groupId>com.sanjay900</groupId>
 			<artifactId>EyrePlugin</artifactId>
-			<version>1.0-SNAPSHOT</version>
+			<version>1.3-SNAPSHOT</version>
 			<scope>provided</scope>
 		</dependency>
 		<dependency>

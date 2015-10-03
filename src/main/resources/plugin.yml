@@ -1,6 +1,6 @@
 name: Gameboy
 version: 1.0 Release
-main: com.sanjay900.jgbe.emu.swinggui
+main: com.sanjay900.jgbe.bukkit.GameboyPlugin
 depend: [ProtocolLib, EyrePlugin]
 commands:
     gameboy:
