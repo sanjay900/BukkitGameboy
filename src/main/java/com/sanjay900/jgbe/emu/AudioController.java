@@ -155,36 +155,38 @@ public final class AudioController {
 		S4.cnt = 0;
 		S4.encnt = 0;
 	}
-	double a = Math.pow(2d, 1d/12d);
+
+	double a = Math.log(2)/12;
+    public double logOfBaseA(double num) {
+        return Math.log(num) / a;
+    }
+
+    float getPitch(double d) {
+        return (float)Math.pow(2.0, (d - 12.0) / 12.0);
+    }
 	public void playToneFreq(float frequency, int amplitude) {
 		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable(){
 
 			@Override
 			public void run() {
 				if (amplitude != 0) {
-					double f2 = logOfBase(a,frequency/46.25f);
+					double f2 = logOfBaseA(frequency/46.25f);
 					//Gameboy range: 5.9 -> 76.9
 					if (f2 < 24) {
-						playSound(Sound.NOTE_BASS_GUITAR, (float) (amplitude*0.0625), f2);
+						playSound(Sound.BLOCK_NOTE_BASS, (float) (amplitude*0.0625), f2);
 					} else if (f2 < 48) {
 						f2 =f2-24;
-						playSound(Sound.NOTE_BASS, (float) (amplitude*0.0625), f2);
+						playSound(Sound.BLOCK_NOTE_BASS, (float) (amplitude*0.0625), f2);
 					}else if (f2 < 72) {
 						f2 =f2-48;
-						playSound(Sound.NOTE_PIANO, (float) (amplitude*0.0625), f2);
+						playSound(Sound.BLOCK_NOTE_HARP, (float) (amplitude*0.0625), f2);
 					}else {
 						f2 =f2-72;
-						playSound(Sound.NOTE_PLING, (float) (amplitude*0.0625), f2);
+						playSound(Sound.BLOCK_NOTE_PLING, (float) (amplitude*0.0625), f2);
 					}			
 					
 
 				}
-			}
-			public float getPitch(double d) {
-				return (float)Math.pow(2.0, ((double)d - 12.0) / 12.0);
-			}
-			public double logOfBase(double base, double num) {
-			    return Math.log(num) / Math.log(base);
 			}
 			private void playSound(Sound n, float f, double pitch) {
 				float g = getPitch(pitch);
@@ -200,15 +202,9 @@ public final class AudioController {
 				@Override
 				public void run() {
 					
-					double f2 = logOfBase(a,frequency/46.25f);
+					double f2 = logOfBaseA(frequency/46.25f);
 					f2+=12;
-					playSound(Sound.NOTE_SNARE_DRUM, (float) (amplitude*0.0625), f2%24);			
-				}
-				public float getPitch(double d) {
-					return (float)Math.pow(2.0, ((double)d - 12.0) / 12.0);
-				}
-				public double logOfBase(double base, double num) {
-				    return Math.log(num) / Math.log(base);
+					playSound(Sound.BLOCK_NOTE_SNARE, (float) (amplitude*0.0625), f2%24);
 				}
 				private void playSound(Sound n, float f, double pitch) {
 					float g = getPitch(pitch);
