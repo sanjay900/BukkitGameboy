@@ -1,7 +1,7 @@
 name: Gameboy
 version: 1.0 Release
 main: com.sanjay900.jgbe.bukkit.GameboyPlugin
-depend: [ProtocolLib, EyrePlugin]
+depend: [ProtocolLib, nmsUtils]
 commands:
     gameboy:
         aliases: [gb, game, gba]

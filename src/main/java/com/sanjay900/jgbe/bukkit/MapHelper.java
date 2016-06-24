@@ -39,7 +39,7 @@ public class MapHelper {
 		double weightB = 2 + (255 - rmean) / 256.0;
 		return weightR * r * r + weightG * g * g + weightB * b * b;
 	}
-	//Grayscale should ship the expensive distance calculations
+	//Grayscale should skip the expensive distance calculations
 	public static byte matchColor(int c1){
 		switch (c1) {
 		case 0xfff8f8f8:

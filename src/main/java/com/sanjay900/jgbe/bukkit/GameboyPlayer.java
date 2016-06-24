@@ -4,6 +4,8 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.util.UUID;
 
+import net.tangentmc.nmsUtils.NMSUtils;
+import net.tangentmc.nmsUtils.packets.Key;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -22,8 +24,6 @@ import com.sanjay900.jgbe.converters.MarioLand1Converter;
 import com.sanjay900.jgbe.converters.RedBlueConverter;
 import com.sanjay900.jgbe.converters.YellowConverter;
 import com.sanjay900.jgbe.emu.FHandler;
-import com.sanjay900.nmsUtil.movementController.ControllerFactory;
-import com.sanjay900.nmsUtil.util.Button;
 
 public class GameboyPlayer {
 	GameboyPlugin plugin = GameboyPlugin.getInstance();
@@ -33,12 +33,12 @@ public class GameboyPlayer {
 	GameboyPlayer(final Player p, final String rom) {
 		
 		
-		final Location l = new Location(Bukkit
+		/*final Location l = new Location(Bukkit
 				.getWorld("gba"), 76,
 				46.75, 66);
 		l.getBlock().getRelative(BlockFace.DOWN).setType(Material.BARRIER);
 		l.setDirection(new Vector (0,0,-1));
-		p.teleport(l);
+		p.teleport(l);*/
 		p.setAllowFlight(false);
 		p.setFlying(false);
 		Bukkit.getScheduler().runTaskLater(plugin, new Runnable(){
@@ -72,47 +72,45 @@ public class GameboyPlayer {
 				p.getInventory().setItem(8, exit);
 				p.getInventory().setHeldItemSlot(0);
 				p.sendMessage(ChatColor.YELLOW+"Controlls: Jump for A, Sneak for B, Hold the clock and Mine for start, Interact for select, and move for directionals.");
-				new ControllerFactory().withLocation(l).withPlayer(p).build();	
-				Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, new Runnable(){
+				NMSUtils.getInstance().getUtil().stealPlayerControls(p.getLocation(),p);
+				Bukkit.getScheduler().runTaskLaterAsynchronously(plugin, () -> {
+                    try {
+                        //TODO stop this being hardcoded.
+                        String filename = plugin.getDataFolder().getAbsolutePath()+"/roms/"+rom;
+                        plugin.tryToLoadROM(filename);
+                        File f = new File(plugin.getDataFolder().getAbsolutePath()+"/saves/"+p.getUniqueId().toString()+"_"+GameboyPlugin.curcartname+".st");
+                        if (f.exists()) {
+                            DataInputStream distream = FHandler.getDataInputStream(plugin.getDataFolder().getAbsolutePath()+"/../../../gameboy/saves/"+p.getUniqueId().toString()+"_"+GameboyPlugin.curcartname+".st");
+                            plugin.cpu.loadState(distream);
+                            distream.close();
+                        }
+                        if (plugin.cpu.isConnected())
+                            plugin.cpu.severLink();
 
-					@Override
-					public void run() {
-						try {
-							String filename = plugin.getDataFolder().getAbsolutePath()+"/../../../gameboy/roms/"+rom;
-							plugin.tryToLoadROM(filename);
-							File f = new File(plugin.getDataFolder().getAbsolutePath()+"/../../../gameboy/saves/"+p.getUniqueId().toString()+"_"+GameboyPlugin.curcartname+".st");
-							if (f.exists()) {
-								DataInputStream distream = FHandler.getDataInputStream(plugin.getDataFolder().getAbsolutePath()+"/../../../gameboy/saves/"+p.getUniqueId().toString()+"_"+GameboyPlugin.curcartname+".st");
-								plugin.cpu.loadState(distream);
-								distream.close();
-							}
-							if (plugin.cpu.isConnected())
-								plugin.cpu.severLink();
+                        plugin.cpu.serveLink(p);
+                        Bukkit.getScheduler().runTaskLater(GameboyPlugin.getInstance(),() -> {
+                            board = Bukkit.getScoreboardManager().getNewScoreboard();
 
-							plugin.cpu.serveLink(p);
-							Bukkit.getScheduler().runTaskLater(GameboyPlugin.getInstance(),() -> {
-								board = Bukkit.getScoreboardManager().getNewScoreboard();
+                            p.setScoreboard(board);
+                            if (rom.contains("red")||rom.contains("blue"))
+                                conv = new RedBlueConverter(GameboyPlayer.this);
+                            if(rom.contains("yellow"))
+                                conv = new YellowConverter(GameboyPlayer.this);
+                            if (rom.contains("crystal"))
+                                conv = new CrystalConverter(GameboyPlayer.this);
+                            if(rom.contains("land.gb"))
+                                conv = new MarioLand1Converter(GameboyPlayer.this);
+                            if(rom.contains("bomb"))
+                                conv = new BombermanConverter(GameboyPlayer.this);
+                        },5l);
 
-								p.setScoreboard(board);
-								if (rom.contains("red")||rom.contains("blue")) 
-									conv = new RedBlueConverter(GameboyPlayer.this);
-								if(rom.contains("yellow")) 
-									conv = new YellowConverter(GameboyPlayer.this);
-								if (rom.contains("crystal")) 
-									conv = new CrystalConverter(GameboyPlayer.this);
-								if(rom.contains("land.gb"))
-									conv = new MarioLand1Converter(GameboyPlayer.this);
-								if(rom.contains("bomb"))
-									conv = new BombermanConverter(GameboyPlayer.this);
-							},5l);
+                        GameboyPlugin.resumeEmulation(true);
 
-							plugin.resumeEmulation(true);
-
-						} catch (Exception ex) {
-							ex.printStackTrace();
-						}
-					}},7l);
-			}}, 20l);
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                },7L);
+			}}, 20L);
 
 
 	}
@@ -123,7 +121,7 @@ public class GameboyPlayer {
 			plugin.cpu.releaseButton(keyMasks[i]);
 		}
 	}
-	public void keyToggled(Button key, boolean pressed) {
+	public void keyToggled(Key key, boolean pressed) {
 		if (plugin.cpu.cartridge == null) return;
 		switch (key) {
 		case UP:
@@ -144,10 +142,10 @@ public class GameboyPlayer {
 		case UNMOUNT:
 			press(pressed,5);
 			break;
-		case OPENINVENTORY:
+		case OPEN_INVENTORY:
 			press(pressed,7);
 			break;
-		case DROPITEM:
+		case DROP_ITEM:
 			press(pressed,6);
 			break;
 		case BREAK:

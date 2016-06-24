@@ -1,13 +1,6 @@
 package com.sanjay900.jgbe.bukkit;
 
-import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import com.sanjay900.menus.api.IconCallback;
-
-public class ServerCallback extends IconCallback{
+/*public class ServerCallback extends IconCallback{
 
 	private int serverId;
 	private GameboyPlugin plugin = GameboyPlugin.getInstance();
@@ -36,4 +29,4 @@ public class ServerCallback extends IconCallback{
 		
 		}
 
-}
+}*/

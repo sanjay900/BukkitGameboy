@@ -11,8 +11,6 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import com.sanjay900.jgbe.converters.RedBlueConverter;
 import com.sanjay900.jgbe.converters.RedBlueConverter.dataType;
@@ -113,7 +111,7 @@ public class CommandHandler implements CommandExecutor{
 				sender.sendMessage("Reset Game!");
 				return true;
 			}
-			if (args[0].equalsIgnoreCase("accept")) {
+			/*if (args[0].equalsIgnoreCase("accept")) {
 				if (plugin.socketio.acceptServer == -1) {
 					sender.sendMessage(ChatColor.AQUA+"You don't have any Link requests right now.");
 					return true;
@@ -151,7 +149,7 @@ public class CommandHandler implements CommandExecutor{
 
 				plugin.socketio.acceptServer = -1;
 				return true;
-			}
+			}*/
 			return false;
 
 

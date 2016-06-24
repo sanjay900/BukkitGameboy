@@ -1,27 +1,9 @@
 package com.sanjay900.jgbe.bukkit;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.UUID;
-
-import lombok.Getter;
-
-import org.bukkit.Bukkit;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import com.github.nkzawa.emitter.Emitter;
-import com.github.nkzawa.socketio.client.Socket;
-import com.sanjay900.eyrePlugin.EyrePlugin;
-import com.sanjay900.eyrePlugin.sockets.SocketIOHandler;
-import com.sanjay900.eyrePlugin.utils.Cooldown;
-import com.sanjay900.jgbe.converters.RedBlueConverter;
-import com.sanjay900.jgbe.emu.CPU;
-
 public class SocketIo {
 
-	public int acceptServer = -1;
-	public UUID acceptPlayer = null;
+	/*public int acceptServer = -1;
+    public UUID acceptPlayer = null;
 	public HashMap<Integer,RemoteServerLink> servers = new HashMap<Integer, RemoteServerLink>();
 	public Socket client;
 	public GameboyPlugin plugin = GameboyPlugin.getInstance();
@@ -162,5 +144,5 @@ public class SocketIo {
 			}
 		}, 5l, 20l);
 
-	}
+	}*/
 }
