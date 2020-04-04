@@ -26,6 +26,8 @@ public final class AudioController {
 
 	boolean[] channelactive = new boolean[5];
 
+	private CPU cpu;
+	Player player;
 	public final class SoundRegister {
 		int on;
 		int pos;
@@ -69,7 +71,10 @@ public final class AudioController {
 		return channelactive[i];
 	}
 
-	public AudioController() {
+
+	public AudioController(CPU cpu, Player player) {
+		this.cpu = cpu;
+		this.player = player;
 		IO = new int[0x30];
 		cyclesLeftToRender=0;
 		S1=new SoundRegister();
@@ -142,7 +147,7 @@ public final class AudioController {
 		S3.on = IO[0x0a] >> 7;
 		if (S3.on!=0) for (i = 0; i < 0xf; i++)
 			IO[i+0x20] = 0x13 ^ IO[i+0x21];
-		IO[0x2f] = 0x13 ^ plugin.cpu.VC.LCDC;
+		IO[0x2f] = 0x13 ^ cpu.VC.LCDC;
 	}
 
 	void s4_init() {
@@ -164,55 +169,39 @@ public final class AudioController {
     float getPitch(double d) {
         return (float)Math.pow(2.0, (d - 12.0) / 12.0);
     }
+
+	private void playSound(Sound n, float f, double pitch) {
+		float g = getPitch(pitch);
+		player.playSound(player.getLocation(), n, f, g);
+	}
 	public void playToneFreq(float frequency, int amplitude) {
-		Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable(){
-
-			@Override
-			public void run() {
-				if (amplitude != 0) {
-					double f2 = logOfBaseA(frequency/46.25f);
-					//Gameboy range: 5.9 -> 76.9
-					if (f2 < 24) {
-						playSound(Sound.BLOCK_NOTE_BASS, (float) (amplitude*0.0625), f2);
-					} else if (f2 < 48) {
-						f2 =f2-24;
-						playSound(Sound.BLOCK_NOTE_BASS, (float) (amplitude*0.0625), f2);
-					}else if (f2 < 72) {
-						f2 =f2-48;
-						playSound(Sound.BLOCK_NOTE_HARP, (float) (amplitude*0.0625), f2);
-					}else {
-						f2 =f2-72;
-						playSound(Sound.BLOCK_NOTE_PLING, (float) (amplitude*0.0625), f2);
-					}			
-					
-
+		Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+			if (amplitude != 0) {
+				double f2 = logOfBaseA(frequency/46.25f);
+				//Gameboy range: 5.9 -> 76.9
+				if (f2 < 24) {
+					playSound(Sound.BLOCK_NOTE_BLOCK_BASS, (float) (amplitude*0.0625), f2);
+				} else if (f2 < 48) {
+					f2 =f2-24;
+					playSound(Sound.BLOCK_NOTE_BLOCK_BASS, (float) (amplitude*0.0625), f2);
+				}else if (f2 < 72) {
+					f2 =f2-48;
+					playSound(Sound.BLOCK_NOTE_BLOCK_HARP, (float) (amplitude*0.0625), f2);
+				}else {
+					f2 =f2-72;
+					playSound(Sound.BLOCK_NOTE_BLOCK_GUITAR, (float) (amplitude*0.0625), f2);
 				}
-			}
-			private void playSound(Sound n, float f, double pitch) {
-				float g = getPitch(pitch);
-				for (Player p: Bukkit.getOnlinePlayers()) {
-					p.playSound(p.getLocation(), n, f, g);
-				}
+
+
 			}
 		});
 	}
 	public void playDrumFreq(float frequency, int amplitude) {
-		 Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable(){
-
-				@Override
-				public void run() {
-					
-					double f2 = logOfBaseA(frequency/46.25f);
-					f2+=12;
-					playSound(Sound.BLOCK_NOTE_SNARE, (float) (amplitude*0.0625), f2%24);
-				}
-				private void playSound(Sound n, float f, double pitch) {
-					float g = getPitch(pitch);
-					for (Player p: Bukkit.getOnlinePlayers()) {
-						p.playSound(p.getLocation(), n, f, g);
-					}
-				}
-			});
+		 Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+			 double f2 = logOfBaseA(frequency/46.25f);
+			 f2+=12;
+			 playSound(Sound.BLOCK_NOTE_BLOCK_SNARE, (float) (amplitude*0.0625), f2%24);
+		 });
 		   
 	}
 	private void s1_freq_d(int d) {
@@ -306,7 +295,7 @@ public final class AudioController {
 		SweepTimerTick=false;
 
 
-		int[] w=plugin.cpu.isCGB()?cgbwave:dmgwave;
+		int[] w=cpu.isCGB()?cgbwave:dmgwave;
 		for (int i = 0; i < 0x10; ++i)
 			WAVE[i]=w[i];
 		for (int i = 0; i < 0x10; ++i)

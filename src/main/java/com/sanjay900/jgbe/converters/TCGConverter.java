@@ -19,6 +19,7 @@ public class TCGConverter extends Converter{
 	Objective o;
 	private String[] table;
 	public TCGConverter(GameboyPlayer gp) {
+		super(gp);
 		o = gp.board.registerNewObjective("data", "dummy");
 		o.setDisplayName("Player Stats");
 		o.setDisplaySlot(DisplaySlot.SIDEBAR);
@@ -67,20 +68,20 @@ public class TCGConverter extends Converter{
 		}
 	}
 	public int getCapacity() {
-		return plugin.cpu.read(0xD163);
+		return cpu.read(0xD163);
 	}
 	private int[] pkm(int off_hex,int off_otname,int off_name,int off_data) {
 		byte[] pkm = new byte[67];
 		ByteBuffer bb = ByteBuffer.wrap(pkm);
-		bb.put((byte) plugin.cpu.read(off_hex));
+		bb.put((byte) cpu.read(off_hex));
 		for (int i = 0; i < 11; i++) {
-			bb.put((byte) plugin.cpu.read(off_otname+i));
+			bb.put((byte) cpu.read(off_otname+i));
 		}
 		for (int i = 0; i < 11; i++) {
-			bb.put((byte) plugin.cpu.read(off_name+i));
+			bb.put((byte) cpu.read(off_name+i));
 		}
 		for (int i = 0; i < 44; i++) {
-			bb.put((byte) plugin.cpu.read(off_data+i));
+			bb.put((byte) cpu.read(off_data+i));
 		}
 		bb.order(ByteOrder.LITTLE_ENDIAN);
 		
@@ -240,7 +241,7 @@ public class TCGConverter extends Converter{
 		}
 		//Badges
 		if (address == 0xD356-1) {
-			int badges = getBitsSet((byte)plugin.cpu.read(0xD356-1));
+			int badges = getBitsSet((byte)cpu.read(0xD356-1));
 			o.getScore("Badges:").setScore(3);
 			o.getScoreboard().getTeam("Badges:").setSuffix(" "+badges);
 		}
@@ -248,9 +249,9 @@ public class TCGConverter extends Converter{
 		//DA42 - Minutes, two bytes
 		//DA44 - Seconds, one byte
 		if (address >= 0xDA40-1 && address <= 0xDA44-1 ) {
-			int hours = getShort((byte)plugin.cpu.read(0xDA41-1),(byte)plugin.cpu.read(0xDA40-1));
-			int minutes = getShort((byte)plugin.cpu.read(0xDA43-1),(byte)plugin.cpu.read(0xDA42-1));
-			int seconds = plugin.cpu.read(0xDA44-1);
+			int hours = getShort((byte)cpu.read(0xDA41-1),(byte)cpu.read(0xDA40-1));
+			int minutes = getShort((byte)cpu.read(0xDA43-1),(byte)cpu.read(0xDA42-1));
+			int seconds = cpu.read(0xDA44-1);
 			o.getScore("Play Time:").setScore(6);
 			o.getScoreboard().getTeam("Play Time:").setSuffix(" "+String.format("%02d",hours)+":"+String.format("%02d",minutes)+":"+String.format("%02d",seconds));
 		}

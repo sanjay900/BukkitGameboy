@@ -3,6 +3,7 @@ package com.sanjay900.jgbe.converters;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+import com.sanjay900.jgbe.bukkit.GameboyPlayer;
 import org.bukkit.Bukkit;
 
 import com.google.common.base.CharMatcher;
@@ -11,7 +12,9 @@ import com.sanjay900.jgbe.emu.CPU;
 
 public abstract class Converter {
 	GameboyPlugin plugin = GameboyPlugin.getInstance();
-	public Converter() {
+	protected CPU cpu;
+	public Converter(GameboyPlayer player) {
+		cpu = player.getCpu();
 	}
 	public void writtenMemory(int address) {
 		if (plugin.isEnabled())
@@ -58,11 +61,11 @@ public abstract class Converter {
 		return bb.getShort();
 	}
 	public int[] getWram(int start, int end) {
-		int[] mm = plugin.cpu.wMemMap[start>>12];
+		int[] mm = cpu.wMemMap[start>>12];
 		if (mm!=null) {
 			return Arrays.copyOfRange(mm, start&0x0FFF, 1+end&0x0FFF);
 		}
-		return Arrays.copyOfRange(plugin.cpu.WRAM[plugin.cpu.CurrentWRAMBank], start-0xd000, 1+end-0xd000);
+		return Arrays.copyOfRange(cpu.WRAM[cpu.CurrentWRAMBank], start-0xd000, 1+end-0xd000);
 	}
 	
 }

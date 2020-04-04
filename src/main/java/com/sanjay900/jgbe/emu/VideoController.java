@@ -1,7 +1,7 @@
 package com.sanjay900.jgbe.emu;
 
-import com.sanjay900.jgbe.bukkit.GameboyPlugin;
 import com.sanjay900.jgbe.bukkit.MapHelper;
+import com.sanjay900.jgbe.bukkit.rendering.ScreenHandler;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
@@ -12,7 +12,6 @@ import java.io.IOException;
 
 
 public final class VideoController {
-    GameboyPlugin plugin = GameboyPlugin.getInstance();
     private final int MIN_WIDTH = 160;
     private final int MIN_HEIGHT = 144;
     private BufferedImage drawImg[] = new BufferedImage[2];
@@ -66,7 +65,7 @@ public final class VideoController {
     private int cfskip = 0;
     public int fskip = 1;
     public boolean allow_writes_in_mode_2_3 = true;
-
+    private CPU cpu;
     public void restart() {
         LY = 0;
         STAT = STAT & 0xFC;
@@ -82,7 +81,7 @@ public final class VideoController {
         SCY = 0;
         WX = 0;
         WY = 0;
-        LCDC = plugin.cpu.BIOS_enabled ? 0x00 : 0x91;
+        LCDC = cpu.BIOS_enabled ? 0x00 : 0x91;
         STAT = 0x85;
         STAT_statemachine_state = 0;
         LCDCcntdwn = 80;
@@ -110,9 +109,10 @@ public final class VideoController {
         for (int i = 0; i < 0x4000; ++i)
             VRAM[i] = 0;
     }
-
-    public VideoController(int image_width, int image_height) {
-
+    ScreenHandler handler;
+    public VideoController(CPU cpu, ScreenHandler handler) {
+        this.handler = handler;
+        this.cpu = cpu;
         drawImg = new BufferedImage[2];
         int width = MIN_WIDTH;
         int height = MIN_HEIGHT;
@@ -258,14 +258,10 @@ public final class VideoController {
 
 
     private void palChange(int palcol, int r, int g, int b) {
-
-
         palColors[palcol] = ((r << 16) | (g << 8) | (b));
         palColorsmc[palcol] = MapHelper.matchColor(palColors[palcol]);
 
     }
-
-    long lastms;
 
     private void blitImage() {
         cfskip--;
@@ -279,7 +275,7 @@ public final class VideoController {
                 int[] blitLine = blitImg[y];
                 System.arraycopy(blitLine, 0, drawData, y * 160, 160);
             }
-            GameboyPlugin.getInstance().screenthread.drawImage(blitImgmc,drawImg[curDrawImg]);
+            handler.drawImage(blitImgmc);
             curDrawImg ^= 1;
         }
         curBGY = 0;
@@ -292,7 +288,7 @@ public final class VideoController {
 
         int[][] curColors = GrayColors[index];
 
-        int value = plugin.cpu.IOP[index + 0x47];
+        int value = cpu.IOP[index + 0x47];
 
 
         if (index == 0) index = (0x20 >> 2);
@@ -445,8 +441,8 @@ public final class VideoController {
 
                     LCDCcntdwn += (isCGB ? 376 : 372) - mode3duration;
                     STAT &= 0xFC;
-                    if ((STAT & (1 << 3)) != 0) plugin.cpu.triggerInterrupt(1);
-                    if (LY < 144) plugin.cpu.elapseTime(plugin.cpu.hblank_dma());
+                    if ((STAT & (1 << 3)) != 0) cpu.triggerInterrupt(1);
+                    if (LY < 144) cpu.elapseTime(cpu.hblank_dma());
                     ++STAT_statemachine_state;
                     break;
                 case 2:
@@ -462,16 +458,16 @@ public final class VideoController {
                         if (LY == LYC) {
                             STAT = STAT | (1 << 2);
                             if ((STAT & (1 << 6)) != 0) {
-                                plugin.cpu.triggerInterrupt(1);
+                                cpu.triggerInterrupt(1);
                             }
                         }
-                        if ((STAT & (1 << 5)) != 0) plugin.cpu.triggerInterrupt(1);
+                        if ((STAT & (1 << 5)) != 0) cpu.triggerInterrupt(1);
                         STAT_statemachine_state = 0;
                     } else {
                         STAT = (STAT & 0xFC) | 1;
                         ++STAT_statemachine_state;
-                        if ((LCDC & 0x80) != 0) plugin.cpu.triggerInterrupt(0);
-                        if ((STAT & (1 << 4)) != 0) plugin.cpu.triggerInterrupt(1);
+                        if ((LCDC & 0x80) != 0) cpu.triggerInterrupt(0);
+                        if ((STAT & (1 << 4)) != 0) cpu.triggerInterrupt(1);
                         blitImage();
                     }
                     break;
@@ -479,7 +475,7 @@ public final class VideoController {
                     if (LY == LYC) {
                         STAT = STAT | 4;
                         if ((STAT & (1 << 6)) != 0) {
-                            plugin.cpu.triggerInterrupt(1);
+                            cpu.triggerInterrupt(1);
                         }
                     }
                     if (LY == 153) LY = 0;
@@ -499,9 +495,9 @@ public final class VideoController {
                 case 6:
                     STAT = (STAT & 0xfc) | 2;
                     if ((LY == LYC) && (STAT & (1 << 6)) != 0) {
-                        plugin.cpu.triggerInterrupt(1);
+                        cpu.triggerInterrupt(1);
                     }
-                    if ((STAT & (1 << 5)) != 0) plugin.cpu.triggerInterrupt(1);
+                    if ((STAT & (1 << 5)) != 0) cpu.triggerInterrupt(1);
                     LCDCcntdwn += 80;
                     STAT_statemachine_state = 0;
                     break;
@@ -534,7 +530,7 @@ public final class VideoController {
             return;
         }
 
-        int newLCDCcntdwn = LCDCcntdwn - (int) (plugin.cpu.TotalCycleCount - plugin.cpu.lastVCRenderCycleCount);
+        int newLCDCcntdwn = LCDCcntdwn - (int) (cpu.TotalCycleCount - cpu.lastVCRenderCycleCount);
         int cyclesToRender = (mode3duration - newLCDCcntdwn - cyclepos - 4);
         cyclepos += cyclesToRender;
 
@@ -680,13 +676,13 @@ public final class VideoController {
         if (index < 0xa000) {
             if (allow_writes_in_mode_2_3 || ((LCDC & 0x80) == 0) || ((STAT & 3) != 3))
                 return VRAM[index - 0x8000 + CurrentVRAMBank];
-            System.out.println("WARNING: Read from VRAM[" + String.format("0x%04x", index) + "] denied during mode " + (STAT & 3) + ", PC=" + String.format("0x%04x", (plugin.cpu.getPC())));
+            System.out.println("WARNING: Read from VRAM[" + String.format("0x%04x", index) + "] denied during mode " + (STAT & 3) + ", PC=" + String.format("0x%04x", (cpu.getPC())));
             return 0xff;
         }
         if ((index > 0xfdff) && (index < 0xfea0)) {
             if (allow_writes_in_mode_2_3 || ((LCDC & 0x80) == 0) || ((STAT & 2) == 0))
                 return OAM[index - 0xfe00];
-            System.out.println("WARNING: Read from OAM[" + String.format("0x%04x", index) + "] denied during mode " + (STAT & 3) + ", PC=" + String.format("0x%04x", (plugin.cpu.getPC())));
+            System.out.println("WARNING: Read from OAM[" + String.format("0x%04x", index) + "] denied during mode " + (STAT & 3) + ", PC=" + String.format("0x%04x", (cpu.getPC())));
             return 0xff;
         }
         int b = 0xff;
@@ -718,7 +714,7 @@ public final class VideoController {
             case 0x07:
             case 0x08:
             case 0x09:
-                b = plugin.cpu.IOP[index - 0xff00];
+                b = cpu.IOP[index - 0xff00];
                 break;
             case 0x0a:
                 b = WY;
@@ -727,7 +723,7 @@ public final class VideoController {
                 b = WX;
                 break;
             case 0x0d:
-                b = plugin.cpu.doublespeed ? (1 << 7) : 0;
+                b = cpu.doublespeed ? (1 << 7) : 0;
                 break;
             case 0x0f:
                 b = getcurVRAMBank();
@@ -737,7 +733,7 @@ public final class VideoController {
             case 0x13:
             case 0x14:
             case 0x15:
-                b = plugin.cpu.IOP[index - 0xff00];
+                b = cpu.IOP[index - 0xff00];
                 break;
             case 0x28:
                 b = BGPI;
@@ -753,7 +749,7 @@ public final class VideoController {
                 break;
             case 0x2c:
                 System.out.printf("WARNING: VC.read(): Read from *undocumented* IO port $%04x\n", index);
-                b = plugin.cpu.IOP[index - 0xff00] | 0xfe;
+                b = cpu.IOP[index - 0xff00] | 0xfe;
                 break;
             default:
                 System.out.printf("TODO: VC.read(): Read from IO port $%04x\n", index);
@@ -769,7 +765,7 @@ public final class VideoController {
                 anydirty = true;
                 return;
             }
-            System.out.println("WARNING: Write to VRAM[" + String.format("0x%04x", index) + "] denied during mode " + (STAT & 3) + ", PC=" + String.format("0x%04x", (plugin.cpu.getPC())));
+            System.out.println("WARNING: Write to VRAM[" + String.format("0x%04x", index) + "] denied during mode " + (STAT & 3) + ", PC=" + String.format("0x%04x", (cpu.getPC())));
             return;
         }
         if ((index > 0xfdff) && (index < 0xfea0)) {
@@ -777,7 +773,7 @@ public final class VideoController {
                 OAM[index - 0xfe00] = value;
                 return;
             }
-            System.out.println("WARNING: Write to OAM[" + String.format("0x%04x", index) + "] denied during mode " + (STAT & 3) + ", PC=" + String.format("0x%04x", (plugin.cpu.getPC())));
+            System.out.println("WARNING: Write to OAM[" + String.format("0x%04x", index) + "] denied during mode " + (STAT & 3) + ", PC=" + String.format("0x%04x", (cpu.getPC())));
             return;
         }
         switch (index & 0x3f) {
@@ -789,7 +785,7 @@ public final class VideoController {
                 STAT = (STAT & 0x87) | (value & 0x78);
                 if (!isCGB && ((STAT & 2) == 0) && ((LCDC & 0x80) != 0)) {
 
-                    plugin.cpu.triggerInterrupt(1);
+                    cpu.triggerInterrupt(1);
                 }
                 break;
             case 0x02:
@@ -810,19 +806,19 @@ public final class VideoController {
                 STAT &= ~(1 << 2);
                 if (LYC != value && LY == value && (STAT & (1 << 6)) != 0) {
                     STAT |= (1 << 2);
-                    plugin.cpu.triggerInterrupt(1);
+                    cpu.triggerInterrupt(1);
                 }
                 LYC = value;
                 break;
             case 0x06: {
 
 
-                plugin.cpu.last_memory_access = plugin.cpu.last_memory_access_internal;
+                cpu.last_memory_access = cpu.last_memory_access_internal;
 
                 for (int i = 0; i < 0xa0; ++i) {
-                    plugin.cpu.write(0xfe00 | i, plugin.cpu.read(i + (value << 8)));
+                    cpu.write(0xfe00 | i, cpu.read(i + (value << 8)));
                 }
-                plugin.cpu.last_memory_access_internal = plugin.cpu.last_memory_access;
+                cpu.last_memory_access_internal = cpu.last_memory_access;
             }
             break;
             case 0x07:
@@ -830,7 +826,7 @@ public final class VideoController {
             case 0x09:
                 if (useSubscanlineRendering)
                     renderScanlinePart();
-                plugin.cpu.IOP[index - 0xff00] = value;
+                cpu.IOP[index - 0xff00] = value;
                 updateMonoColData(index - 0xff47);
                 break;
             case 0x0a:
@@ -840,7 +836,7 @@ public final class VideoController {
                 WX = value;
                 break;
             case 0x0d:
-                plugin.cpu.speedswitch = ((value & 1) != 0);
+                cpu.speedswitch = ((value & 1) != 0);
                 break;
             case 0x0f:
                 selectVRAMBank(value & 1);
@@ -849,25 +845,25 @@ public final class VideoController {
             case 0x12:
             case 0x13:
             case 0x14:
-                plugin.cpu.IOP[index - 0xff00] = value;
+                cpu.IOP[index - 0xff00] = value;
                 break;
             case 0x15:
-                int mode = ((plugin.cpu.hblank_dma_state | value) & 0x80);
+                int mode = ((cpu.hblank_dma_state | value) & 0x80);
                 if (mode == 0) {
-                    int src = ((plugin.cpu.IOP[0x51] << 8) | plugin.cpu.IOP[0x52]) & 0xfff0;
-                    int dst = (((plugin.cpu.IOP[0x53] << 8) | plugin.cpu.IOP[0x54]) & 0x1ff0) | 0x8000;
+                    int src = ((cpu.IOP[0x51] << 8) | cpu.IOP[0x52]) & 0xfff0;
+                    int dst = (((cpu.IOP[0x53] << 8) | cpu.IOP[0x54]) & 0x1ff0) | 0x8000;
                     int len = ((value & 0x7f) + 1) << 4;
                     for (int i = 0; i < len; ++i)
-                        write(dst++, plugin.cpu.read(src++));
-                    plugin.cpu.IOP[0x51] = src >> 8;
-                    plugin.cpu.IOP[0x52] = src & 0xF0;
-                    plugin.cpu.IOP[0x53] = 0x1F & (dst >> 8);
-                    plugin.cpu.IOP[0x54] = dst & 0xF0;
-                    plugin.cpu.IOP[0x55] = 0xff;
+                        write(dst++, cpu.read(src++));
+                    cpu.IOP[0x51] = src >> 8;
+                    cpu.IOP[0x52] = src & 0xF0;
+                    cpu.IOP[0x53] = 0x1F & (dst >> 8);
+                    cpu.IOP[0x54] = dst & 0xF0;
+                    cpu.IOP[0x55] = 0xff;
 
                 } else {
-                    plugin.cpu.hblank_dma_state = value;
-                    plugin.cpu.IOP[0x55] = value & 0x7f;
+                    cpu.hblank_dma_state = value;
+                    cpu.IOP[0x55] = value & 0x7f;
                 }
                 break;
             case 0x28:
@@ -884,7 +880,7 @@ public final class VideoController {
                 break;
             case 0x2c:
                 System.out.printf("WARNING: VC.write(): Write %02x to *undocumented* IO port $%04x\n", value, index);
-                plugin.cpu.IOP[index - 0xff00] = value;
+                cpu.IOP[index - 0xff00] = value;
                 break;
             default:
                 System.out.printf("TODO: VC.write(): Write %02x to IO port $%04x\n", value, index);

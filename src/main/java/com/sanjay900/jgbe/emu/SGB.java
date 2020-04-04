@@ -17,17 +17,21 @@ public class SGB {
 	int sgbNumControllers=1;
 	int sgbSelectedController=0; // Which controller is being observed
 	int sgbButtonsChecked=0;
+	private CPU cpu;
+	public SGB(CPU cpu) {
+		this.cpu = cpu;
+	}
 	public void handleP1(int val) {
 		if ((val&0x30) == 0) {
 			System.out.println("TEST");
 			// Start packet transfer
 			sgbPacketBit = 0;
-			plugin.cpu.IOP[0x00] = 0xcf;
+			cpu.IOP[0x00] = 0xcf;
 			return;
 		}
 		if (sgbPacketBit != -1) {
-			int oldVal = plugin.cpu.IOP[0x00];
-			plugin.cpu.IOP[0x00] = val;
+			int oldVal = cpu.IOP[0x00];
+			cpu.IOP[0x00] = val;
 
 			int shift = sgbPacketBit%8;
 			int bytet = (sgbPacketBit/8)%16;
@@ -78,10 +82,10 @@ public class SGB {
 						sgbSelectedController = 0;
 					sgbButtonsChecked = 0;
 				}
-				plugin.cpu.IOP[0x00] = 0xff - sgbSelectedController;
+				cpu.IOP[0x00] = 0xff - sgbSelectedController;
 			}
 			else {
-				plugin.cpu.IOP[0x00] = val|0xcf;
+				cpu.IOP[0x00] = val|0xcf;
 				if ((val&0x30) == 0x10)
 					sgbButtonsChecked |= 1;
 				else if ((val&0x30) == 0x20)

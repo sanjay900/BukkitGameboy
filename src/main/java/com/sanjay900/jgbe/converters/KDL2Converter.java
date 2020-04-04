@@ -10,6 +10,7 @@ public class KDL2Converter extends Converter{
 	Objective o;
 	Player pl;
 	public KDL2Converter(GameboyPlayer gp, Player pl) {
+		super(gp);
 		this.pl = pl;
 		o = gp.board.registerNewObjective("data", "dummy");
 		o.setDisplayName("Player Stats");
@@ -35,7 +36,7 @@ public class KDL2Converter extends Converter{
 	@Override
 	public void writeMemory(int address) {
 		if (address == 0xDEE3) {
-			int health = (plugin.cpu.read(address)/2);
+			int health = (cpu.read(address)/2);
 			if (health/6d*20d > 0) 
 				pl.setHealth(health/6d*20d);
 			else 
@@ -44,23 +45,23 @@ public class KDL2Converter extends Converter{
 			o.getScoreboard().getTeam("Health:").setSuffix(" "+health);
 		}
 		if (address == 0xDEE1) {
-			int star = (plugin.cpu.read(address));
+			int star = (cpu.read(address));
 			pl.setExp(star/7f);
 			o.getScore("Stars:").setScore(0);
 			o.getScoreboard().getTeam("Stars:").setSuffix(" "+star);
 		}
 		if (address == 0xa084) {
-			pl.setTotalExperience(plugin.cpu.read(address));
+			pl.setTotalExperience(cpu.read(address));
 			o.getScore("Lives:").setScore(0);
-			o.getScoreboard().getTeam("Lives:").setSuffix(" "+plugin.cpu.read(address));
+			o.getScoreboard().getTeam("Lives:").setSuffix(" "+cpu.read(address));
 		}
 		if (address >= 0xDedb && address <= 0xDedd) {
 			String score = "";
 			boolean nonzero = false;
 			for (int i = 0; i < 3; i++) {
-				if (plugin.cpu.read(0xDedb+i)!=0 || nonzero) {
+				if (cpu.read(0xDedb+i)!=0 || nonzero) {
 					nonzero = true;
-					score+=String.format("%02d",Integer.parseInt(Integer.toHexString(plugin.cpu.read(0xDedb+i))));
+					score+=String.format("%02d",Integer.parseInt(Integer.toHexString(cpu.read(0xDedb+i))));
 				}
 			}
 			score+="0";

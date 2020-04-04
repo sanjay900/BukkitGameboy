@@ -9,6 +9,7 @@ import com.sanjay900.jgbe.bukkit.GameboyPlayer;
 public class MetroidConverter extends Converter{
 	Objective o;
 	public MetroidConverter(GameboyPlayer gp) {
+		super(gp);
 		o = gp.board.registerNewObjective("data", "dummy");
 		o.setDisplayName("Player Stats");
 		o.setDisplaySlot(DisplaySlot.SIDEBAR);
@@ -26,15 +27,15 @@ public class MetroidConverter extends Converter{
 	public void writeMemory(int address) {
 		if (address == 0xD051) {
 			o.getScore("Energy:").setScore(0);
-			o.getScoreboard().getTeam("Energy:").setSuffix(" "+Integer.toHexString(plugin.cpu.read(address)));
+			o.getScoreboard().getTeam("Energy:").setSuffix(" "+Integer.toHexString(cpu.read(address)));
 		}
 		if (address == 0xD053) {
 			o.getScore("Missiles:").setScore(0);
-			o.getScoreboard().getTeam("Missiles:").setSuffix(" "+Integer.toHexString(plugin.cpu.read(address)));
+			o.getScoreboard().getTeam("Missiles:").setSuffix(" "+Integer.toHexString(cpu.read(address)));
 		}
 		if (address == 0xD09A) {
 			o.getScore("Metroids left:").setScore(0);
-			o.getScoreboard().getTeam("Metroids left:").setSuffix(" "+Integer.toHexString(plugin.cpu.read(address)));
+			o.getScoreboard().getTeam("Metroids left:").setSuffix(" "+Integer.toHexString(cpu.read(address)));
 		}
 	}
 

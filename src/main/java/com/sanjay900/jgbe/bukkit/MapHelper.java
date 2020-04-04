@@ -33,7 +33,7 @@ public class MapHelper {
 		double rmean = ((c1 >> 16) + c2.getRed()) / 2.0;
 		double r = ((c1 >> 16) & 0xFF) - c2.getRed();
 		double g = ((c1 >> 8) & 0xFF) - c2.getGreen();
-		int b = ((c1 >> 0) & 0xFF) - c2.getBlue();
+		int b = ((c1) & 0xFF) - c2.getBlue();
 		double weightR = 2 + rmean / 256.0;
 		double weightG = 4.0;
 		double weightB = 2 + (255 - rmean) / 256.0;

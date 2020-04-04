@@ -1,14 +1,20 @@
 package com.sanjay900.jgbe.bukkit;
 
+import com.comphenix.packetwrapper.WrapperPlayServerNamedSoundEffect;
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.ProtocolManager;
+import com.comphenix.protocol.events.PacketAdapter;
+import com.comphenix.protocol.events.PacketEvent;
+import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
-import com.sanjay900.jgbe.emu.FHandler;
-import net.tangentmc.nmsUtils.events.PlayerPushedKeyEvent;
-import net.tangentmc.nmsUtils.packets.Key;
-import net.tangentmc.nmsUtils.utils.Cooldown;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.ComponentBuilder;
+import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
-import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.ItemFrame;
 import org.bukkit.entity.Player;
@@ -19,48 +25,68 @@ import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.hanging.HangingBreakByEntityEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.player.*;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.util.Vector;
+import org.bukkit.inventory.meta.ItemMeta;
 
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.Map.Entry;
+import java.util.*;
 
 public class JavaBoyEventHandler implements Listener {
     GameboyPlugin plugin = GameboyPlugin.getInstance();
-    //public Menu menu;
-    int serverId;
-    public String cart = "";
+    KeyListener l;
+    private Map<Inventory, Map<ItemStack, Runnable>> interactions = new HashMap<>();
+    private HashMap<UUID, Runnable> interactionsText = new HashMap<>();
 
     public JavaBoyEventHandler() {
-        serverId = Bukkit.getServer().getPort() - 25580;
-        //	menu = new Menu(this.plugin, ChatColor.BLUE+"Gameboy Link Menu",9, null);
         Bukkit.getPluginManager().registerEvents(this, plugin);
+        l = new KeyListener();
+        final ProtocolManager manager = ProtocolLibrary.getProtocolManager();
+        manager.addPacketListener(
+                new PacketAdapter(plugin, PacketType.Play.Server.NAMED_SOUND_EFFECT) {
+                    @Override
+                    public void onPacketSending(PacketEvent event) {
+                        WrapperPlayServerNamedSoundEffect wps = new WrapperPlayServerNamedSoundEffect(event.getPacket());
+                        if (wps.getSoundCategory() != EnumWrappers.SoundCategory.MASTER) {
+                            event.setCancelled(true);
+                        }
+                    }
+                });
     }
 
     @EventHandler
     public void onJoin(final PlayerJoinEvent evt) {
-        if (plugin.gp != null) {
-            Bukkit.getOnlinePlayers().stream().forEach(player -> Bukkit.getOnlinePlayers().stream().forEach(player2 -> player.hidePlayer(player2)));
-            evt.getPlayer().setAllowFlight(true);
-            evt.getPlayer().setFlying(true);
-            evt.getPlayer().getInventory().clear();
-            evt.getPlayer().updateInventory();
-            Location l = new Location(Bukkit
-                    .getWorld("gba"), 76,
-                    46.5, 66);
-            l.setDirection(new Vector(0, 0, -1));
-            evt.getPlayer().teleport(l);
-        } else if (!cart.equals("")) {
-            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                if (plugin.gp != null) {
-                    plugin.cpu.severLink();
-                }
-                plugin.gp = new GameboyPlayer(evt.getPlayer(), cart);
-                cart = "";
-            }, 40l);
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (player != evt.getPlayer()) {
+                player.hidePlayer(plugin, evt.getPlayer());
+                evt.getPlayer().hidePlayer(plugin, player);
+            }
         }
+//        GameboyPlayer gp = plugin.getPlayer(evt.getPlayer());
+//        if (gp == null) {
+        plugin.listRoms(evt.getPlayer());
+        GameboyPlayer.giveItems(evt.getPlayer(), true);
+//        }
+//        TODO: Spectating could just be done from the arcade itself, and we could just share chat between the arcade and this server
+//        if (gp != null) {
+//            Bukkit.getOnlinePlayers().stream().forEach(player -> Bukkit.getOnlinePlayers().stream().forEach(player2 -> player.hidePlayer(player2)));
+//            evt.getPlayer().setAllowFlight(true);
+//            evt.getPlayer().setFlying(true);
+//            evt.getPlayer().getInventory().clear();
+//            evt.getPlayer().updateInventory();
+//            Location l = new Location(Bukkit
+//                    .getWorld("gba"), 76,
+//                    46.5, 66);
+//            l.setDirection(new Vector(0, 0, -1));
+//            evt.getPlayer().teleport(l);
+//        }
+//        Use the bungee messaging system to handle starting a game automatically.
+//        else if (!cart.equals("")) {
+//            plugin.startPlaying(evt.getPlayer(), cart);
+//            cart = "";
+//        }
 
     }
 
@@ -113,8 +139,19 @@ public class JavaBoyEventHandler implements Listener {
     }
 
     public void onClick(final Player pl, Action action) {
-        if (plugin.gp == null) return;
         ItemStack it = pl.getItemInHand();
+        if (it.hasItemMeta()
+                && it.getItemMeta().hasDisplayName()
+                && it.getItemMeta().getDisplayName()
+                .contains("Quit Game")) {
+            ByteArrayDataOutput out = ByteStreams.newDataOutput();
+            out.writeUTF("Connect");
+            out.writeUTF("survival");
+            pl.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
+            return;
+        }
+        GameboyPlayer gp = plugin.getPlayer(pl);
+        if (gp == null) return;
         final Key buttonPressed;
         if (it.hasItemMeta()
                 && it.getItemMeta().hasDisplayName()
@@ -123,18 +160,7 @@ public class JavaBoyEventHandler implements Listener {
             createLinkMenu(pl);
             return;
         }
-
-
-        if (it.hasItemMeta()
-                && it.getItemMeta().hasDisplayName()
-                && it.getItemMeta().getDisplayName()
-                .contains("Quit Game")) {
-            ByteArrayDataOutput out = ByteStreams.newDataOutput();
-            out.writeUTF("Connect");
-            out.writeUTF("lobby");
-            pl.sendPluginMessage(plugin, "BungeeCord", out.toByteArray());
-            return;
-        } else if (action == Action.RIGHT_CLICK_AIR
+        if (action == Action.RIGHT_CLICK_AIR
                 || action == Action.RIGHT_CLICK_BLOCK) {
 
             if (it.hasItemMeta()
@@ -173,12 +199,12 @@ public class JavaBoyEventHandler implements Listener {
         } else {
             return;
         }
-        plugin.gp.keyToggled(buttonPressed, true);
+        gp.keyToggled(buttonPressed, true);
         Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
 
             @Override
             public void run() {
-                plugin.gp.keyToggled(buttonPressed, false);
+                gp.keyToggled(buttonPressed, false);
             }
         }, 10l);
 
@@ -186,33 +212,32 @@ public class JavaBoyEventHandler implements Listener {
 
     @EventHandler
     public void pushedKey(final PlayerPushedKeyEvent evt) {
-        if (plugin.gp != null) {
+        GameboyPlayer gp = plugin.getPlayer(evt.getPlayer());
+        if (gp != null) {
             if (evt.getButtons().contains(Key.OPEN_INVENTORY)) {
-                if (plugin.gp != null) {
-                    plugin.gp.keyToggled(Key.OPEN_INVENTORY, true);
-                    evt.setCancelled(true);
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        if (Cooldown.tryCooldown(evt.getPlayer(), "start", 200))
-                            plugin.gp.keyToggled(Key.OPEN_INVENTORY, false);
-                    }, 4l);
-                }
+                gp.keyToggled(Key.OPEN_INVENTORY, true);
+                evt.setCancelled(true);
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    if (Cooldown.tryCooldown(evt.getPlayer(), "start", 200))
+                        gp.keyToggled(Key.OPEN_INVENTORY, false);
+                }, 4l);
                 return;
             }
             if (evt.getButtons().contains(Key.DROP_ITEM)) {
-                plugin.gp.keyToggled(Key.DROP_ITEM, true);
+                gp.keyToggled(Key.DROP_ITEM, true);
                 evt.setCancelled(true);
                 Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
 
                     @Override
                     public void run() {
                         if (Cooldown.tryCooldown(evt.getPlayer(), "select", 200))
-                            plugin.gp.keyToggled(Key.DROP_ITEM, false);
+                            gp.keyToggled(Key.DROP_ITEM, false);
                     }
-                }, 4l);
+                }, 4L);
                 return;
             }
             for (Key b : Key.values()) {
-                plugin.gp.keyToggled(b, evt.getButtons().contains(b));
+                gp.keyToggled(b, evt.getButtons().contains(b));
             }
         }
     }
@@ -220,71 +245,101 @@ public class JavaBoyEventHandler implements Listener {
 
     @EventHandler
     public void leaveGameEvt(PlayerQuitEvent evt) {
-        leaveGame(evt.getPlayer());
+        GameboyPlayer gp = plugin.getPlayer(evt.getPlayer());
+        if (gp != null) gp.stopEmulation();
     }
 
     @EventHandler
-    public void leaveGameEvt(PlayerKickEvent evt) {
-        leaveGame(evt.getPlayer());
-    }
-
-    private void leaveGame(Player p) {
-        if (plugin.cpu.player == null || !plugin.cpu.player.equals(p.getUniqueId())) return;
-        for (Player pl : Bukkit.getOnlinePlayers()) {
-            if (!plugin.cpu.player.equals(pl.getUniqueId())) {
-                pl.sendMessage("You player that you were spectating has left their gameboy.");
+    public void command(PlayerCommandPreprocessEvent evt) {
+        if (evt.getMessage().startsWith("/textcallback")) {
+            UUID uuid = UUID.fromString(evt.getMessage().split(" ")[1]);
+            Runnable c = interactionsText.remove(uuid);
+            if (c != null) {
+                c.run();
+                evt.setCancelled(true);
             }
         }
-        if (!plugin.cpu.canRun()) {
-            return;
-        }
-        //Kill the connection and pause emulation. Your not going to restore a connected snapshot
-        plugin.cpu.severLink();
-        GameboyPlugin.pauseEmulation(false);
-        Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
-            @Override
-            public void run() {
-                DataOutputStream dostream;
-                try {
-                    dostream = FHandler.getDataOutputStream(plugin.getDataFolder().getAbsolutePath() + "/../../../gameboy/saves/" + plugin.cpu.player.toString() + "_" + GameboyPlugin.curcartname + ".st");
-                    plugin.cpu.saveState(dostream);
-                    dostream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
-                    @Override
-                    public void run() {
-                        Bukkit.getServer().shutdown();
-                    }
-                }, 100l);
-            }
-        }, 20l);
     }
 
-    public void updateLinkMenu() {
-        /*for (Entry<Integer, RemoteServerLink> e : this.plugin.socketio.servers.entrySet()) {
-            int serverId = e.getKey();
-            String oplayer = e.getValue().player;
-            String cart = e.getValue().cart;
-            boolean isConnected = e.getValue().isConnected;
-            if (Bukkit.getServer().getPort() - 25580 == serverId) {
-                menu.setSlot(serverId - 1, new Icon(Material.WOOL, serverId, (byte) 4, ChatColor.YELLOW + "Current Server"));
-            } else if (isConnected) {
-                menu.setSlot(serverId - 1, new Icon(Material.WOOL, serverId, (byte) 15, ChatColor.YELLOW + "Server Link in use"));
-            } else if (cart.equals("null") || oplayer.equals("null")) {
-                menu.setSlot(serverId - 1, new Icon(Material.WOOL, serverId, (byte) 15, ChatColor.YELLOW + "Empty server"));
-            } else {
-                Icon icon = new Icon(Material.WOOL, serverId, (byte) 5, ChatColor.YELLOW + "Link to Server", new String[]{ChatColor.AQUA + "Server: " + ChatColor.YELLOW + String.valueOf(serverId), ChatColor.AQUA + "Game: " + ChatColor.YELLOW + cart, ChatColor.AQUA + "Player: " + ChatColor.YELLOW + oplayer});
-                icon.setCallback(new ServerCallback(serverId));
-                menu.setSlot(serverId - 1, icon);
-            }
-        }*/
+    @EventHandler
+    public void inv(InventoryClickEvent evt) {
+        if (interactions.containsKey(evt.getClickedInventory())) {
+            evt.setCancelled(true);
+        }
+        Runnable r = interactions.get(evt.getClickedInventory()).get(evt.getCurrentItem());
+        if (r != null) {
+            r.run();
+            evt.getWhoClicked().closeInventory();
+        }
+    }
+
+    @EventHandler
+    public void invClose(InventoryCloseEvent evt) {
+        interactions.remove(evt.getInventory());
     }
 
     private void createLinkMenu(final Player player) {
-        if (plugin.cpu.isConnected()) return;
-        updateLinkMenu();
-        //menu.show(player);
+        GameboyPlayer gp = plugin.getPlayer(player);
+        if (gp == null || gp.getCpu().isConnected()) {
+            return;
+        }
+        int size = this.plugin.listGames().size();
+        size = size / 9;
+        size = size * 9;
+        size = Math.max(9, size);
+        Inventory inventory = Bukkit.createInventory(player, size, "Gameboy link menu");
+        Map<ItemStack, Runnable> map = new HashMap<>();
+        interactions.put(inventory, map);
+        boolean foundGame = false;
+        for (GameboyPlayer game : this.plugin.listGames()) {
+            if (game == gp) {
+                continue;
+            }
+            if (game.canBeLinked() && game.getCurcartname().equals(gp.getCurcartname())) {
+                foundGame = true;
+                ItemStack it = new ItemStack(Material.DIAMOND, 1);
+                ItemMeta meta = it.getItemMeta();
+                meta.setDisplayName(ChatColor.YELLOW + "Link to " + game.getPlayerName());
+                it.setItemMeta(meta);
+                inventory.addItem(it);
+                map.put(it, () -> {
+                    Player playerToConnect = Bukkit.getPlayer(game.player);
+                    playerToConnect.sendMessage("The Player " + player.getDisplayName() + " has requested to link up with your game");
+                    TextComponent t = new TextComponent(new ComponentBuilder("Click to accept").create());
+                    t.setUnderlined(true);
+                    t.setColor(net.md_5.bungee.api.ChatColor.GREEN);
+                    UUID acceptID = UUID.randomUUID();
+                    UUID denyID = UUID.randomUUID();
+                    interactionsText.put(acceptID, () -> {
+                        playerToConnect.sendMessage("You have accepted that request. Your games are now linked together.");
+                        player.sendMessage(playerToConnect.getDisplayName() + " has accepted linking to your game. Your games are now linked together.");
+                        gp.link(game);
+                        interactionsText.remove(acceptID);
+                        interactionsText.remove(denyID);
+                    });
+                    t.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/textcallback "+acceptID));
+                    t.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("Accept request").color(net.md_5.bungee.api.ChatColor.GREEN).create()));
+                    playerToConnect.spigot().sendMessage(t);
+                    t = new TextComponent(new ComponentBuilder("Click to deny").create());
+                    t.setUnderlined(true);
+                    t.setColor(net.md_5.bungee.api.ChatColor.RED);
+
+                    interactionsText.put(denyID,()->{
+                        playerToConnect.sendMessage("You have denied that request");
+                        player.sendMessage(playerToConnect.getDisplayName() + " has denied linking to your game");
+                        interactionsText.remove(acceptID);
+                        interactionsText.remove(denyID);
+                    });
+                    t.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/textcallback "+denyID));
+                    t.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new ComponentBuilder("Deny request").color(net.md_5.bungee.api.ChatColor.RED).create()));
+                    playerToConnect.spigot().sendMessage(t);
+                });
+            }
+        }
+        if (!foundGame) {
+            player.sendMessage("Unfortunately no players are playing the same game as you currently. Try again later.");
+            return;
+        }
+        player.openInventory(inventory);
     }
 }

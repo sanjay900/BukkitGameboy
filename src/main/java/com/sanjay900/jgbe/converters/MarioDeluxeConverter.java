@@ -11,6 +11,7 @@ public class MarioDeluxeConverter extends Converter{
 	Objective o;
 	Player pl;
 	public MarioDeluxeConverter(GameboyPlayer gp, Player pl) {
+		super(gp);
 		this.pl = pl;
 		o = gp.board.registerNewObjective("data", "dummy");
 		o.setDisplayName("Player Stats");
@@ -37,22 +38,22 @@ public class MarioDeluxeConverter extends Converter{
 	@Override
 	public void writeMemory(int address) {
 		if (address == 0xc17a || address == 0xc17b) {
-			int score = plugin.cpu.read(0xc17b)*255;
-			score+=plugin.cpu.read(0xc17a);
+			int score = cpu.read(0xc17b)*255;
+			score+=cpu.read(0xc17a);
 			o.getScore("Score:").setScore(0);
 			o.getScoreboard().getTeam("Score:").setSuffix(" "+score+"0");
 		}
 		if (address == 0xc1f2) {
 			o.getScore("Coins:").setScore(0);
-			o.getScoreboard().getTeam("Coins:").setSuffix(" "+plugin.cpu.read(address));
+			o.getScoreboard().getTeam("Coins:").setSuffix(" "+cpu.read(address));
 		}
 		if (address == 0xc17f) {
 			o.getScore("Lives:").setScore(0);
-			o.getScoreboard().getTeam("Lives:").setSuffix(" "+plugin.cpu.read(address));
+			o.getScoreboard().getTeam("Lives:").setSuffix(" "+cpu.read(address));
 		}
 		if (address == 0xc17e||address == 0xc17d) {
-			int time = plugin.cpu.read(0xc17e)*255;
-			time+=plugin.cpu.read(0xc17d);
+			int time = cpu.read(0xc17e)*255;
+			time+=cpu.read(0xc17d);
 			o.getScore("Time Remaining:").setScore(0);
 			o.getScoreboard().getTeam("Time Remaining:").setSuffix(" "+time);
 		}

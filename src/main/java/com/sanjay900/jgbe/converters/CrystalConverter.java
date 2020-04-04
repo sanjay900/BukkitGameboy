@@ -17,6 +17,7 @@ public class CrystalConverter extends Converter{
 	Objective o;
 	private String[] table;
 	public CrystalConverter(GameboyPlayer gp) {
+		super(gp);
 		o = gp.board.registerNewObjective("data", "dummy");
 		o.setDisplayName("Player Stats");
 		o.setDisplaySlot(DisplaySlot.SIDEBAR);
@@ -65,33 +66,33 @@ public class CrystalConverter extends Converter{
 		}
 	}
 	public int getCapacity() {
-		return plugin.cpu.read(0xDA22);
+		return cpu.read(0xDA22);
 	}
 	public Object get(int p, dataType var) {
 		int pk = 48*p;
 		switch (var) {
 		case sprite:
-			return plugin.cpu.read(0xDA2A+pk);
+			return cpu.read(0xDA2A+pk);
 		case num:
-			return plugin.cpu.read(0xDA23+p);
+			return cpu.read(0xDA23+p);
 		case otname:
-			return decode(Arrays.copyOfRange(plugin.cpu.WRAM[0], 0x0B4A+11*p, 0x0B54+11*p));
+			return decode(Arrays.copyOfRange(cpu.WRAM[0], 0x0B4A+11*p, 0x0B54+11*p));
 		case name: 
-			return decode(Arrays.copyOfRange(plugin.cpu.WRAM[0], 0x0B8C+11*p, 0x0B96+11*p));
+			return decode(Arrays.copyOfRange(cpu.WRAM[0], 0x0B8C+11*p, 0x0B96+11*p));
 		case hp:
-			return getShort(plugin.cpu.read(0xDA4D+pk),plugin.cpu.read(0xDA4C+pk));
+			return getShort(cpu.read(0xDA4D+pk),cpu.read(0xDA4C+pk));
 		case level:
-			return plugin.cpu.read(0xDA49+pk);
+			return cpu.read(0xDA49+pk);
 		case maxhp:
-			return getShort(plugin.cpu.read(0xDA4F+pk),plugin.cpu.read(0xDA4E+pk));
+			return getShort(cpu.read(0xDA4F+pk),cpu.read(0xDA4E+pk));
 		case attack:
-			return getShort(plugin.cpu.read(0xDA51+pk),plugin.cpu.read(0xDA50+pk));
+			return getShort(cpu.read(0xDA51+pk),cpu.read(0xDA50+pk));
 		case defense:
-			return getShort(plugin.cpu.read(0xDA53+pk),plugin.cpu.read(0xDA52+pk));
+			return getShort(cpu.read(0xDA53+pk),cpu.read(0xDA52+pk));
 		case speed:
-			return getShort(plugin.cpu.read(0xDA55+pk),plugin.cpu.read(0xDA54+pk));
+			return getShort(cpu.read(0xDA55+pk),cpu.read(0xDA54+pk));
 		case special:
-			return getShort(plugin.cpu.read(0xDA57+pk),plugin.cpu.read(0xDA56+pk));
+			return getShort(cpu.read(0xDA57+pk),cpu.read(0xDA56+pk));
 		default:
 			return null;
 		}
@@ -145,8 +146,8 @@ public class CrystalConverter extends Converter{
 		}
 		//Badges
 		if (address == 0xD857||address == 0xD858) {
-			int badges = getBitsSet((byte)plugin.cpu.read(0xD857));
-			badges += getBitsSet((byte)plugin.cpu.read(0xD858));
+			int badges = getBitsSet((byte)cpu.read(0xD857));
+			badges += getBitsSet((byte)cpu.read(0xD858));
 			o.getScore("Badges:").setScore(3);
 			o.getScoreboard().getTeam("Badges:").setSuffix(" "+badges);
 		}
@@ -154,9 +155,9 @@ public class CrystalConverter extends Converter{
 		//d4c6 - Minutes, two bytes
 		//d4c7 - Seconds, one byte
 		if (address >= 0xd4c4 && address <= 0xd4c7 ) {
-			int hours = getShort(plugin.cpu.read(0xd4c5),plugin.cpu.read(0xd4c4));
-			int minutes = plugin.cpu.read(0xd4c6);
-			int seconds = plugin.cpu.read(0xd4c7);
+			int hours = getShort(cpu.read(0xd4c5),cpu.read(0xd4c4));
+			int minutes = cpu.read(0xd4c6);
+			int seconds = cpu.read(0xd4c7);
 			o.getScore("Play Time:").setScore(6);
 			o.getScoreboard().getTeam("Play Time:").setSuffix(" "+String.format("%02d",hours)+":"+String.format("%02d",minutes)+":"+String.format("%02d",seconds));
 		}

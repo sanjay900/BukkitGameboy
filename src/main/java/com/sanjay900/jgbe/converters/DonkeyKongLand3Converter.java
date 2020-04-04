@@ -9,6 +9,7 @@ import com.sanjay900.jgbe.bukkit.GameboyPlayer;
 public class DonkeyKongLand3Converter extends Converter{
 	Objective o;
 	public DonkeyKongLand3Converter(GameboyPlayer gp) {
+		super(gp);
 		o = gp.board.registerNewObjective("data", "dummy");
 		o.setDisplayName("Player Stats");
 		o.setDisplaySlot(DisplaySlot.SIDEBAR);
@@ -36,31 +37,31 @@ public class DonkeyKongLand3Converter extends Converter{
 	public void writeMemory(int address) {
 		if (address == 0xFFAC) {
 			o.getScore("Character:").setScore(0);
-			o.getScoreboard().getTeam("Character:").setSuffix(" "+characters[plugin.cpu.read(address)]);
+			o.getScoreboard().getTeam("Character:").setSuffix(" "+characters[cpu.read(address)]);
 		}
 		if (address == 0xFFAA) {
 			o.getScore("Lives:").setScore(0);
-			o.getScoreboard().getTeam("Lives:").setSuffix(" "+Integer.toHexString(plugin.cpu.read(address)));
+			o.getScoreboard().getTeam("Lives:").setSuffix(" "+Integer.toHexString(cpu.read(address)));
 		}
 		if (address == 0xFFAB) {
 			o.getScore("Banannas:").setScore(0);
-			o.getScoreboard().getTeam("Banannas:").setSuffix(" "+Integer.toHexString(plugin.cpu.read(address)));
+			o.getScoreboard().getTeam("Banannas:").setSuffix(" "+Integer.toHexString(cpu.read(address)));
 		}
 		if (address == 0xFFB3) {
 			o.getScore("Bear Coins:").setScore(0);
-			o.getScoreboard().getTeam("Bear Coins:").setSuffix(" "+Integer.toHexString(plugin.cpu.read(address)));
+			o.getScoreboard().getTeam("Bear Coins:").setSuffix(" "+Integer.toHexString(cpu.read(address)));
 		}
 		if (address == 0xFFB4) {
 			o.getScore("Bonus Coins:").setScore(0);
-			o.getScoreboard().getTeam("Bonus Coins:").setSuffix(" "+Integer.toHexString(plugin.cpu.read(address)));
+			o.getScoreboard().getTeam("Bonus Coins:").setSuffix(" "+Integer.toHexString(cpu.read(address)));
 		}
 		if (address == 0xFFB5) {
 			o.getScore("DK Coins:").setScore(0);
-			o.getScoreboard().getTeam("DK Coins:").setSuffix(" "+Integer.toHexString(plugin.cpu.read(address)));
+			o.getScoreboard().getTeam("DK Coins:").setSuffix(" "+Integer.toHexString(cpu.read(address)));
 		}
 		if (address == 0xFFB0 || address == 0xFFB1 ||address == 0xFFB2 ) {
 			o.getScore("Play Time:").setScore(0);
-			o.getScoreboard().getTeam("Play Time:").setSuffix(" "+String.format("%02d",Integer.parseInt(Integer.toHexString(plugin.cpu.read(0xFFB0))))+":"+String.format("%02d",Integer.parseInt(Integer.toHexString(plugin.cpu.read(0xFFB1))))+":"+String.format("%02d",Integer.parseInt(Integer.toHexString(plugin.cpu.read(0xFFB2)))));
+			o.getScoreboard().getTeam("Play Time:").setSuffix(" "+String.format("%02d",Integer.parseInt(Integer.toHexString(cpu.read(0xFFB0))))+":"+String.format("%02d",Integer.parseInt(Integer.toHexString(cpu.read(0xFFB1))))+":"+String.format("%02d",Integer.parseInt(Integer.toHexString(cpu.read(0xFFB2)))));
 		}
 	}
 

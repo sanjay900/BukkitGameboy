@@ -11,6 +11,7 @@ public class KDL1Converter extends Converter{
 	Objective o;
 	Player pl;
 	public KDL1Converter(GameboyPlayer gp, Player pl) {
+		super(gp);
 		this.pl = pl;
 		o = gp.board.registerNewObjective("data", "dummy");
 		o.setDisplayName("Player Stats");
@@ -35,25 +36,25 @@ public class KDL1Converter extends Converter{
 	@Override
 	public void writeMemory(int address) {
 		if (address == 0xD086) {
-			if ((plugin.cpu.read(address))/6d*20d > 0) {
-				pl.setHealth((plugin.cpu.read(address))/6d*20d);
+			if ((cpu.read(address))/6d*20d > 0) {
+				pl.setHealth((cpu.read(address))/6d*20d);
 			} else {
 				pl.setHealth(0.5);
 			}
 			o.getScore("Health:").setScore(0);
-			o.getScoreboard().getTeam("Health:").setSuffix(" "+plugin.cpu.read(address));
+			o.getScoreboard().getTeam("Health:").setSuffix(" "+cpu.read(address));
 		}
 		if (address == 0xD089) {
 			o.getScore("Lives:").setScore(0);
-			o.getScoreboard().getTeam("Lives:").setSuffix(" "+(plugin.cpu.read(address)-1));
+			o.getScoreboard().getTeam("Lives:").setSuffix(" "+(cpu.read(address)-1));
 		}
 		if (address >= 0xD06f && address <= 0xD073) {
 			String score = "";
 			boolean nonzero = false;
 			for (int i = 0; i < 5; i++) {
-				if (plugin.cpu.read(0xD06f+i)!=0 || nonzero) {
+				if (cpu.read(0xD06f+i)!=0 || nonzero) {
 					nonzero = true;
-					score+=plugin.cpu.read(0xD06f+i);
+					score+=cpu.read(0xD06f+i);
 				}
 			}
 			score+="0";

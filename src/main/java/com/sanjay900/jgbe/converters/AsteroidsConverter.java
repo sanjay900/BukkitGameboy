@@ -10,6 +10,7 @@ public class AsteroidsConverter extends Converter{
 	Player pl;
 	//TOOD: new api for database
 	public AsteroidsConverter(GameboyPlayer gp, Player pl) {
+		super(gp);
 	/*	this.pl = pl;
 		o = gp.board.registerNewObjective("data", "dummy");
 		o.setDisplayName("Player Stats");
@@ -75,7 +76,7 @@ public class AsteroidsConverter extends Converter{
 				i--;
 			}
 		}
-		
+
 		updatingScore = false;
 	}
 	private void updateHighScore() {
@@ -84,8 +85,8 @@ public class AsteroidsConverter extends Converter{
 			for (int i =0; i <5;i++) {
 				plugin.cpu.write(i+0xc04c, hdigits[i]);
 			}
-		}	
-		updatingScore = false;	
+		}
+		updatingScore = false;
 	}
 	Connection c;
 	private void updateScore(int score) {
@@ -125,7 +126,7 @@ public class AsteroidsConverter extends Converter{
 				}
 			}
 		});
-		
+
 	}*/
 	@Override
 	public void writeMemory(int address) {

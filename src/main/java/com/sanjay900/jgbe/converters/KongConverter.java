@@ -11,6 +11,7 @@ public class KongConverter extends Converter{
 	Objective o;
 	Player pl;
 	public KongConverter(GameboyPlayer gp, Player pl) {
+		super(gp);
 		this.pl = pl;
 		o = gp.board.registerNewObjective("data", "dummy");
 		o.setDisplayName("Player Stats");
@@ -36,17 +37,17 @@ public class KongConverter extends Converter{
 		
 		if (address == 0xDA43) {
 			o.getScore("Lives:").setScore(0);
-			o.getScoreboard().getTeam("Lives:").setSuffix(" "+plugin.cpu.read(address));
+			o.getScoreboard().getTeam("Lives:").setSuffix(" "+cpu.read(address));
 		}
 		if (address == 0xDA42 || address == 0xDA41) {
-			int score = plugin.cpu.read(0xda42)*255;
-			score+=plugin.cpu.read(0xda41);
+			int score = cpu.read(0xda42)*255;
+			score+=cpu.read(0xda41);
 			o.getScore("Score:").setScore(0);
 			o.getScoreboard().getTeam("Score:").setSuffix(" "+score+"00");
 		}
 		if (address == 0xc711) {
 			o.getScore("Time Remaining:").setScore(0);
-			o.getScoreboard().getTeam("Time Remaining:").setSuffix(" "+plugin.cpu.read(address));
+			o.getScoreboard().getTeam("Time Remaining:").setSuffix(" "+cpu.read(address));
 		}
 	}
 
