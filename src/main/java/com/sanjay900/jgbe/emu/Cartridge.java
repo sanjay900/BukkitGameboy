@@ -198,54 +198,41 @@ public final class Cartridge {
         switch ((MM_ROM[0][0x0148])) {
             case 0x00:
                 rom_mm_size = 2 << 2;
-                System.out.println("ROM size = 32KByte (no ROM banking)");
                 break;
             case 0x01:
                 rom_mm_size = 4 << 2;
-                System.out.println("ROM size = 64KByte (4 banks)");
                 break;
             case 0x02:
                 rom_mm_size = 8 << 2;
-                System.out.println("ROM size = 128KByte (8 banks)");
                 break;
             case 0x03:
                 rom_mm_size = 16 << 2;
-                System.out.println("ROM size = 256KByte (16 banks)");
                 break;
             case 0x04:
                 rom_mm_size = 32 << 2;
-                System.out.println("ROM size = 512KByte (32 banks)");
                 break;
             case 0x05:
                 rom_mm_size = 64 << 2;
-                System.out.println("ROM size = 1MByte (64 banks) - only 63 banks used by MBC1");
                 break;
             case 0x06:
                 rom_mm_size = 128 << 2;
-                System.out.println("ROM size = 2MByte (128 banks) - only 125 banks used by MBC1");
                 break;
             case 0x07:
                 rom_mm_size = 256 << 2;
-                System.out.println("ROM size = 4MByte (256 banks)");
                 break;
             case 0x08:
                 rom_mm_size = 512 << 2;
-                System.out.println("ROM size = 8MByte (512 banks)");
                 break;
             case 0x52:
                 rom_mm_size = 72 << 2;
-                System.out.println("ROM size = 1.1MByte (72 banks)");
                 break;
             case 0x53:
                 rom_mm_size = 80 << 2;
-                System.out.println("ROM size = 1.2MByte (80 banks)");
                 break;
             case 0x54:
                 rom_mm_size = 96 << 2;
-                System.out.println("ROM size = 1.5MByte (96 banks)");
                 break;
             default:
-                System.out.printf("WARNING: Non-standard ROM size! (MM_ROM[0][0x0148]=0x%02x=%d)\n", (MM_ROM[0][0x0148]), (MM_ROM[0][0x0148]));
                 rom_mm_size = 1;
         }
 

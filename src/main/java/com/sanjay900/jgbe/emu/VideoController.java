@@ -920,7 +920,7 @@ public final class VideoController {
         if ((LCDC & (1 << 7)) != 0) {
 
             updatepatpix();
-
+            if (LY > 144) return;
             blitLine = blitImg[LY];
             blitLinemc = blitImgmc[LY];
             TileData = ((LCDC & (1 << 4)) == 0) ? 0x0800 : 0x0000;
