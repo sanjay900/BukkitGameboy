@@ -21,7 +21,8 @@ class KeyListener extends PacketAdapter implements Listener {
                 PacketType.Play.Client.BLOCK_PLACE,
                 PacketType.Play.Client.CLIENT_COMMAND,
                 PacketType.Play.Client.STEER_VEHICLE,
-                PacketType.Play.Client.USE_ENTITY);
+                PacketType.Play.Client.USE_ENTITY,
+                PacketType.Play.Client.ENTITY_ACTION);
         Bukkit.getPluginManager().registerEvents(this, GameboyPlugin.getInstance());
         ProtocolLibrary.getProtocolManager().addPacketListener(this);
     }

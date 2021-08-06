@@ -1,5 +1,8 @@
 package com.sanjay900.jgbe.bukkit;
 
+import com.comphenix.protocol.PacketType;
+import com.comphenix.protocol.ProtocolLibrary;
+import com.comphenix.protocol.events.PacketContainer;
 import com.sanjay900.jgbe.bukkit.rendering.ScreenHandler;
 import com.sanjay900.jgbe.converters.*;
 import com.sanjay900.jgbe.emu.CPU;
@@ -19,6 +22,7 @@ import org.bukkit.util.Vector;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
 import java.util.UUID;
 
 public class GameboyPlayer {
@@ -36,6 +40,7 @@ public class GameboyPlayer {
 
     @Getter
     private CPU cpu;
+    private int asid;
 
     private void stealPlayerControls(Location loc, Player who) {
         if (loc != null) {
@@ -44,6 +49,7 @@ public class GameboyPlayer {
             as.setSmall(true);
             as.addPassenger(who);
             as.setGravity(false);
+            asid = as.getEntityId();
         }
     }
 
@@ -241,6 +247,19 @@ public class GameboyPlayer {
                 press(pressed, 4);
                 break;
             case UNMOUNT:
+//                1.16 is stupid. Is this whole thing actually necessary anymore though, i think you can listen for all this stuff without the armorstand these dayscepti
+                if (pressed) {
+                    Bukkit.getScheduler().runTaskLater(GameboyPlugin.getInstance(), ()->{
+                        PacketContainer pc = ProtocolLibrary.getProtocolManager().createPacket(PacketType.Play.Server.MOUNT);
+                        pc.getIntegers().write(0, asid);
+                        pc.getIntegerArrays().write(0, new int[]{Bukkit.getPlayer(player).getEntityId()});
+                        try {
+                            ProtocolLibrary.getProtocolManager().sendServerPacket(Bukkit.getPlayer(player), pc);
+                        } catch (InvocationTargetException e) {
+                            e.printStackTrace();
+                        }
+                    },5);
+                }
                 press(pressed, 5);
                 break;
             case OPEN_INVENTORY:

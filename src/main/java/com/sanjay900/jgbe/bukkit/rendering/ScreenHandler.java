@@ -47,8 +47,8 @@ public class ScreenHandler {
         wpsm.setItemDamage(id);
         wpsm.setX(left);
         wpsm.setZ(top);
-        wpsm.setColumns(xamt);
-        wpsm.setRows(yamt);
+        wpsm.setRows(xamt);
+        wpsm.setColumns(yamt);
         wpsm.setData(data[id]);
         wpsm.setScale(MapView.Scale.FARTHEST.getValue());
         pcs[id] = wpsm.getHandle();

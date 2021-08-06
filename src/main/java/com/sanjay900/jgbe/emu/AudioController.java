@@ -251,9 +251,9 @@ public final class AudioController {
     }
 
     private void playSound(String n, float f, double pitch) {
-        for (int i =0; i < 8; i++) {
-            player.stopSound(n.substring(0, n.length()-1)+i, SoundCategory.MASTER);
-        }
+        // for (int i =0; i < 8; i++) {
+        //     player.stopSound(n.substring(0, n.length()-1)+i, SoundCategory.MASTER);
+        // }
         player.playSound(player.getLocation(), n, SoundCategory.MASTER, f, (float) pitch);
     }
 
@@ -261,8 +261,8 @@ public final class AudioController {
     static final float[] fsm = new float[fs.length];
 
     static {
-//		Since minecraft notes start at F#, we can use equal temperament to get the number of semitones a frequency is from that note.
-//		Then, we can use the equation given on the wiki (2^(note/12) to get the frequency
+//		Since minecraft notes start at F#, we can work out the offset from that note by substuting in its frequency
+//		Then, we can use the equation given on the wiki (2^(note/12) to get the minecraft notblock pitch
 //		2^(12*log2(frequency/Fn)/12)
         //this calculates all note numbers for all octaves of f.
         for (int i = 0; i < fs.length; i++) {
